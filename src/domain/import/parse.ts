@@ -24,14 +24,25 @@ export interface NormalizedRow {
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const MDY = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
 
-/** Normalize a date cell to ISO YYYY-MM-DD. Throws (with row context) on junk. */
+/** Reject impossible calendar dates (e.g. 2026-13-40) that match the shape but
+ *  aren't real days — they'd corrupt JournalEntry.date and break Date.parse. */
+function assertRealDate(iso: string, raw: string, index: number): string {
+  const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) {
+    throw new Error(`Row ${index + 1}: impossible date "${raw}".`);
+  }
+  return iso;
+}
+
+/** Normalize a date cell to a real ISO YYYY-MM-DD. Throws (with row context) on junk. */
 function toIsoDate(raw: string, index: number): string {
   const t = raw.trim();
-  if (ISO.test(t)) return t;
+  if (ISO.test(t)) return assertRealDate(t, raw, index);
   const m = MDY.exec(t);
   if (m) {
     const [, mo, d, y] = m as unknown as [string, string, string, string];
-    return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    return assertRealDate(`${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`, raw, index);
   }
   throw new Error(`Row ${index + 1}: unrecognized date "${raw}" (expected YYYY-MM-DD or M/D/YYYY).`);
 }
@@ -74,6 +85,14 @@ function amountOf(record: Record<string, string>, profile: ProfileSpec, index: n
       // Signs are presentation only — debit is out, credit is in.
       const out = Math.abs(minorOrZero(pick(record, spec.debit)));
       const inn = Math.abs(minorOrZero(pick(record, spec.credit)));
+      // Exactly one column should carry the amount; both empty/zero or both
+      // nonzero is a malformed export, not a $0 entry.
+      if (out === 0 && inn === 0) {
+        throw new Error(`Row ${index + 1}: both "${spec.debit}" and "${spec.credit}" are empty or zero.`);
+      }
+      if (out !== 0 && inn !== 0) {
+        throw new Error(`Row ${index + 1}: "${spec.debit}" and "${spec.credit}" both have nonzero values (ambiguous).`);
+      }
       return inn - out;
     }
     case "categorized": {

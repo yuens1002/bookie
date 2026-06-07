@@ -49,6 +49,16 @@ describe("parseCsv profiles", () => {
     expect(() => parseCsv("Date,Description,Amount\n", "nope")).toThrow(/Unknown profile/);
     expect(() => parseCsv("Date,Description,Amount\nnot-a-date,X,-1.00\n", "signed-amount")).toThrow(/date/i);
   });
+
+  it("rejects an impossible calendar date that matches the shape", () => {
+    expect(() => parseCsv("Date,Description,Amount\n13/40/2026,X,-1.00\n", "signed-amount")).toThrow(/impossible date/i);
+    expect(() => parseCsv("Date,Description,Amount\n2026-99-99,X,-1.00\n", "signed-amount")).toThrow(/impossible date/i);
+  });
+
+  it("rejects a debit-credit row with neither or both columns filled", () => {
+    expect(() => parseCsv("Date,Description,Debit,Credit\n2026-01-01,X,,\n", "debit-credit")).toThrow(/empty or zero/i);
+    expect(() => parseCsv("Date,Description,Debit,Credit\n2026-01-01,X,10.00,5.00\n", "debit-credit")).toThrow(/ambiguous/i);
+  });
 });
 
 describe("assignExternalIds", () => {
@@ -379,5 +389,22 @@ describe("import_transactions — validation errors", () => {
       arguments: { mode: "commit", profile: "signed-amount", csv: CSV2, paymentAccountId: bankId, mappings: [{ index: 0, targetAccountId: expenseId, propertyId: "prop_missing" }] },
     })) as CallToolResult;
     expect(errText(res)).toMatch(/propertyId values do not exist/);
+  });
+
+  it("rejects duplicate mapping indices", async () => {
+    const res = (await client.callTool({
+      name: "import_transactions",
+      arguments: {
+        mode: "commit",
+        profile: "signed-amount",
+        csv: CSV2,
+        paymentAccountId: bankId,
+        mappings: [
+          { index: 0, targetAccountId: expenseId },
+          { index: 0, targetAccountId: incomeId },
+        ],
+      },
+    })) as CallToolResult;
+    expect(errText(res)).toMatch(/Duplicate mapping/);
   });
 });

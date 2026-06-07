@@ -17,6 +17,13 @@ const DEFAULT_WINDOW_DAYS = 4;
 
 const profileNames = listProfiles() as [string, ...string[]];
 
+/** Shift an ISO date string by N days (lexical ISO compares match DB ordering). */
+function shiftIso(iso: string, days: number): string {
+  const dt = new Date(`${iso}T00:00:00Z`);
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
 export function registerImportTools(server: McpServer): void {
   server.registerTool(
     "import_transactions",
@@ -90,8 +97,18 @@ export function registerImportTools(server: McpServer): void {
         });
         const existingExternalIds = new Set(existing.map((e) => e.externalId as string));
 
+        // Only postings that could match: same amount as some row, within the
+        // date window around the file's span. Avoids scanning the whole account.
+        const amounts = [...new Set(rows.map((r) => r.amountMinor))];
+        const sortedDates = rows.map((r) => r.date).sort();
+        const lo = shiftIso(sortedDates[0]!, -windowDays);
+        const hi = shiftIso(sortedDates[sortedDates.length - 1]!, windowDays);
         const postings = await prisma.posting.findMany({
-          where: { accountId: args.paymentAccountId },
+          where: {
+            accountId: args.paymentAccountId,
+            amount: { in: amounts },
+            entry: { date: { gte: lo, lte: hi } },
+          },
           select: { amount: true, entry: { select: { id: true, date: true, description: true } } },
         });
         const existingPostings: ExistingPosting[] = postings.map((p) => ({
@@ -137,7 +154,7 @@ export function registerImportTools(server: McpServer): void {
         return fail("mode='commit' requires `mappings` (one per row to import). Run mode='preview' first.");
       }
 
-      const byIndex = new Map(args.mappings.map((m) => [m.index, m]));
+      const byIndex = new Map<number, (typeof args.mappings)[number]>();
       for (const m of args.mappings) {
         if (m.index < 0 || m.index >= rows.length) {
           return fail(`mappings index ${m.index} is out of range (file has ${rows.length} rows).`);
@@ -145,6 +162,10 @@ export function registerImportTools(server: McpServer): void {
         if (m.targetAccountId === args.paymentAccountId) {
           return fail(`Row ${m.index}: targetAccountId must differ from paymentAccountId.`);
         }
+        if (byIndex.has(m.index)) {
+          return fail(`Duplicate mapping for index ${m.index}. Map each row at most once.`);
+        }
+        byIndex.set(m.index, m);
       }
 
       // Validate referenced accounts and properties exist (skip rows excluded).
