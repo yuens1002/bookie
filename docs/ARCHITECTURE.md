@@ -19,12 +19,14 @@ Domain        src/domain/*       ← csv, categorization, reconciliation, tax (d
 Data          src/db/*           ← Prisma client; schema in prisma/schema.prisma
 ```
 
-**Separation principle:** the host LLM does language and vision; the server does the ledger, money math, deterministic rules, and reports. Receipts are OCR'd by the *client* — `categorize_transaction` receives already-structured fields, never an image.
+**Separation principle:** the host LLM does language and vision; the server does the ledger, money math, deterministic rules, and reports. Receipts are OCR'd by the *client*; tools receive already-structured fields, never an image.
 
 ## Data model (double-entry)
 
-- **accounts** — chart of accounts. `type` ∈ asset/liability/equity/income/expense. Each is `entity` personal or business. Business expense accounts carry a `schedule_c_line`. Income/expense accounts *are* the spending categories.
-- **journal_entries** — one balanced transaction (date, description, memo, source, external_id for import dedup).
+- **segments** — a line of business (or "personal"); each is its own P&L and tax filing via `taxSchedule` (C / E / null = personal), combinable at year-end and extensible without code changes.
+- **accounts** — chart of accounts. `type` ∈ asset/liability/equity/income/expense. Income/expense accounts *are* the spending categories and carry a `segmentId` (+ `taxLine`, the specific Schedule line); asset/liability/equity accounts are usually segment-neutral (one card spans segments).
+- **properties** — a rental property (Schedule E is filed per property; units are not tracked). `journal_entries.propertyId` tags rental entries.
+- **journal_entries** — one balanced transaction (date, description, memo, source, `external_id` for import dedup, optional `propertyId`).
 - **postings** — legs of an entry. `amount` is **signed integer minor units** (cents): debit positive, credit negative. Postings of an entry always sum to zero.
 - **rules** — `pattern → account` for auto-categorization (priority-ordered).
 - **receipts** — structured receipt data linked to an entry.
