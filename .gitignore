@@ -1,0 +1,23 @@
+node_modules/
+dist/
+*.log
+.scratch/
+
+# SQLite / local DB artifacts (the ledger lives in Postgres now)
+*.db
+*.db-journal
+
+# Personal, local-only assistant instructions (not part of the OSS product)
+CLAUDE.md
+.claude/
+private/
+
+# Env / secrets (Neon connection strings live here — never commit)
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,64 @@
+# Architecture
+
+Bookie is a single Node/TypeScript MCP server with two interchangeable transports and a Neon Postgres double-entry ledger (via Prisma).
+
+## Layers
+
+```
+LLM host (Claude / GPT)         ← language + vision (OCR, prose, intent)
+        │  MCP (stdio | Streamable HTTP)
+        ▼
+Transport     src/transports/*   ← stdio.ts, http.ts (Hono + @hono/node-server)
+        ▼
+MCP server    src/server.ts      ← registers tools (capabilities)
+        ▼
+Tools         src/tools/*        ← one file per tool group; Zod input schemas
+        ▼
+Domain        src/domain/*       ← csv, categorization, reconciliation, tax (deterministic)
+        ▼
+Data          src/db/*           ← Prisma client; schema in prisma/schema.prisma
+```
+
+**Separation principle:** the host LLM does language and vision; the server does the ledger, money math, deterministic rules, and reports. Receipts are OCR'd by the *client* — `categorize_transaction` receives already-structured fields, never an image.
+
+## Data model (double-entry)
+
+- **accounts** — chart of accounts. `type` ∈ asset/liability/equity/income/expense. Each is `entity` personal or business. Business expense accounts carry a `schedule_c_line`. Income/expense accounts *are* the spending categories.
+- **journal_entries** — one balanced transaction (date, description, memo, source, external_id for import dedup).
+- **postings** — legs of an entry. `amount` is **signed integer minor units** (cents): debit positive, credit negative. Postings of an entry always sum to zero.
+- **rules** — `pattern → account` for auto-categorization (priority-ordered).
+- **receipts** — structured receipt data linked to an entry.
+
+`add_transaction` is sugar over postings: "money flows FROM account A TO account B" creates a debit on B (+) and a credit on A (−).
+
+## Money
+
+All amounts are integer minor units. Conversion to/from dollars happens only at tool boundaries and report rendering (`src/lib/money.ts`). No floating-point arithmetic touches the ledger.
+
+## Transports
+
+- **stdio** (`BOOKIE_TRANSPORT=stdio`, default) — for Claude Desktop and local CLI clients. stdout is the protocol channel; logs go to stderr.
+- **Streamable HTTP** (`BOOKIE_TRANSPORT=http`) — Hono app exposing `POST /mcp` (stateless: a fresh server + transport per request) and `GET /health`. Bearer auth via `BOOKIE_API_KEY`. Suitable for mobile consumer LLMs and Railway deploys.
+
+Both share `buildServer()` — transports never differ in capability.
+
+## Persistence
+
+Schema lives in `prisma/schema.prisma` and is applied with `npm run db:push` (and on deploy via the container start command). `src/db/seed.ts` seeds a default US sole-proprietor chart of accounts when the ledger is empty; both transports call it through `src/transports/bootstrap.ts` on startup. `src/db/client.ts` exports a single `PrismaClient`.
+
+Money is stored as `Int` minor units (cents) in `amount`/`total`; never floats.
+
+### One DB — every instance points at the one and only
+
+There is a **single Neon Postgres ledger**. Every instance — the local stdio server, the deployed HTTP server, any future instance — sets `BOOKIE_DB_URL` to the **same** database, so the books are always identical no matter how you reach them. There is no local copy and nothing to reconcile.
+
+| Connection | Env | Used by |
+|------------|-----|---------|
+| Pooled | `BOOKIE_DB_URL` (`…-pooler.…neon.tech`) | runtime queries (Prisma client) |
+| Direct | `BOOKIE_DB_DIRECT_URL` | `prisma db push` / migrations |
+
+We use **Neon branches** to separate environments while keeping one schema: the `production` branch is the real ledger; a `dev` branch backs local development and tests (and ephemeral branches can back CI). Trade-off of one remote primary: the stdio server needs network connectivity and pays a small per-query round-trip — in exchange, exactly one set of books.
+
+## Docs stay in sync
+
+`scripts/gen-tools-doc.ts` connects an in-memory MCP client to the live server and dumps the registered tool schemas to `docs/TOOLS.md`. The manual cannot drift from the code.

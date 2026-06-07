@@ -1,0 +1,149 @@
+// Bookie ledger schema. One Neon Postgres database is the single source of
+// truth; every instance (local stdio + deployed HTTP) connects to the same DB.
+//
+// Money is stored as integer minor units (cents) in `amount` / `total`.
+// Never use floating point for ledger math — see src/lib/money.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("BOOKIE_DB_URL")        // pooled connection (runtime)
+  directUrl = env("BOOKIE_DB_DIRECT_URL") // direct connection (migrations / db push)
+}
+
+enum AccountType {
+  asset
+  liability
+  equity
+  income
+  expense
+}
+
+enum EntrySource {
+  manual
+  import
+  receipt
+}
+
+/// US tax form a segment reports on. C = Schedule C (sole prop / gig),
+/// E = Schedule E (rental real estate). Personal segments have neither.
+enum TaxSchedule {
+  C
+  E
+}
+
+/// A line of business (or "personal"). Each is its own P&L and tax filing, but
+/// they share one ledger so they can be combined at year-end. Extensible — a new
+/// venture is a new row. Segment lives on income/expense accounts; bank/card
+/// (asset/liability) accounts are segment-neutral since one card spans segments.
+model Segment {
+  id          String       @id
+  name        String       @unique
+  taxSchedule TaxSchedule? // null = personal
+  archived    Boolean      @default(false)
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  accounts Account[]
+
+  @@map("segments")
+}
+
+/// Chart of accounts. Income/expense accounts double as spending categories and
+/// carry a segment + tax line. Asset/liability/equity accounts may leave
+/// `segmentId` null (shared across segments, e.g. a business card).
+model Account {
+  id        String      @id
+  name      String
+  type      AccountType
+  segmentId String?     @map("segment_id")
+  taxLine   String?     @map("tax_line") // e.g. "Line 14 — Repairs" (Sch E), "Line 9 — Car and truck" (Sch C)
+  currency  String      @default("USD")
+  archived  Boolean     @default(false)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  segment  Segment?  @relation(fields: [segmentId], references: [id])
+  postings Posting[]
+  rules    Rule[]
+
+  @@index([segmentId])
+  @@map("accounts")
+}
+
+/// A rental property (Schedule E is filed per property). Units are not tracked.
+model Property {
+  id        String   @id
+  name      String
+  portfolio String? // optional grouping (matches export "Portfolio" column)
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entries JournalEntry[]
+
+  @@map("properties")
+}
+
+/// A balanced transaction; its postings always sum to zero.
+model JournalEntry {
+  id          String      @id
+  date        String // ISO YYYY-MM-DD
+  description String
+  memo        String?
+  source      EntrySource @default(manual)
+  externalId  String?     @unique @map("external_id") // bank id / dedup hash
+  propertyId  String?     @map("property_id") // set for rental (Schedule E) entries
+  createdAt   DateTime    @default(now()) @map("created_at")
+
+  postings Posting[]
+  receipts Receipt[]
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([propertyId])
+  @@map("journal_entries")
+}
+
+/// One leg of a journal entry. `amount` is signed minor units: debit +, credit -.
+model Posting {
+  id        String @id
+  entryId   String @map("entry_id")
+  accountId String @map("account_id")
+  amount    Int // minor units (cents), signed
+
+  entry   JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  account Account      @relation(fields: [accountId], references: [id])
+
+  @@index([entryId])
+  @@index([accountId])
+  @@map("postings")
+}
+
+/// Auto-categorization rule: a description pattern maps to a target account.
+model Rule {
+  id        String @id
+  pattern   String
+  accountId String @map("account_id")
+  priority  Int    @default(0)
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@map("rules")
+}
+
+/// Structured receipt data (extracted by the client LLM, not by this server).
+model Receipt {
+  id        String   @id
+  entryId   String?  @map("entry_id")
+  merchant  String?
+  date      String?
+  total     Int? // minor units (cents)
+  rawText   String?  @map("raw_text")
+  lineItems String?  @map("line_items") // JSON string
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entry JournalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  @@map("receipts")
+}
