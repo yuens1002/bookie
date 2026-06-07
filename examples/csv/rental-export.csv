@@ -1,0 +1,7 @@
+"Date","Name","Notes","Details","Category","Sub-Category","Amount","Portfolio","Property","Unit","Data Source","Account","Owner","Attachments"
+"01/02/2025","Hardware Store","Repairs supplies","HARDWARE STORE #100","Repairs & Maintenance","","16.40","Sample Portfolio","123 Example St","","Sample Bank","Checking 1234","",""
+"01/02/2025","Hardware Store","Return","HARDWARE STORE #100","Repairs & Maintenance","","-120.19","Sample Portfolio","123 Example St","","Sample Bank","Checking 1234","",""
+"01/03/2025","Auto Service","Vehicle, oil change","AUTO SERVICE CTR","Admin & Other","Mileage","-10.22","Sample Portfolio","Vehicle","","Sample Bank","Checking 1234","",""
+"01/04/2025","Rent Deposit","Tenant payment
+for January","RENT ACH ID:ST-ABC123","Income","","2700.00","Sample Portfolio","456 Sample Ave","","Sample Bank","Checking 1234","",""
+"01/05/2025","Misc ""Special"" Svc","Note with comma, and ""quote""","MISC SVC","Repairs & Maintenance","Supplies","53.80","Sample Portfolio","123 Example St","","Sample Bank","Checking 1234","",""

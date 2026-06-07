@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 ### Added
+- `import_transactions` tool — import a bank/card statement CSV as balanced double-entry in two steps: `mode='preview'` (parse + dedup + flag possible matches; **writes nothing**) then `mode='commit'` (write the per-row category `mappings`). Shape-based, neutrally-named profiles (`signed-amount`, `debit-credit`, `rental-export`) parsed with an RFC-4180 parser (`csv-parse`) that handles quoted fields, embedded newlines, and pre-signed/categorized amount columns. Content-hash `external_id` makes re-import idempotent (same-file duplicate lines kept distinct); amount+date "possible-match" flagging keeps receipt-first entries from being double-posted.
 - **Segment model** + `manage_segments` tool — segments (Personal, Rental, a gig, a side business…) are a table, each its own P&L and tax filing (Schedule C / E / none), combinable at year-end and extensible without code changes.
 - `Property` model + `manage_properties` tool; `add_transaction` accepts `propertyId` and `query_transactions` returns it (per-property Schedule E tracking).
 - `split_transaction` tool — one balanced entry with a single payment leg + N category legs (a receipt split across categories/segments); the payment leg is what reconciliation matches against a statement.
@@ -18,6 +19,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 - Replaced the binary `personal|business` account flag with the Segment model: income/expense accounts carry a `segmentId` (+ `taxLine`), bank/card accounts stay segment-neutral (one card spans segments); `manage_accounts`/`account_balances` use `segmentId` instead of `entity`. Units are not tracked (properties are).
 - Reworded the project tagline (README + `package.json`) so "personal and business finances" (scope) and "double-entry accounting" (method) read as two distinct ideas, not one compound term.
+- README tool table now lists `split_transaction` and `import_transactions`; "CSV import" moved from the roadmap line to shipped.
 
 ### Fixed
 - `toMinor("")` (and blank/whitespace strings) now throws instead of silently returning `$0`.

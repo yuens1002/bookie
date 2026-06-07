@@ -14,10 +14,10 @@ Phased delivery. Each phase is shippable on its own. Status: ✅ done · 🚧 in
 - ✅ Property dimension: `Property` model, `manage_properties`, `propertyId` on entries (units not tracked)
 - ✅ `delete_transaction` (correct mistakes / remove duplicate imports)
 - ✅ `split_transaction` — one entry, one payment leg + N category legs (a receipt splitting across categories/entities; the payment leg is what a statement shows and reconciliation matches)
-- ⬜ `import_transactions` — parse bank CSV with profiles (split debit/credit, signed-amount, card formats); **preview → confirm** before writing
-- ⬜ Import **match-or-create**: match a statement line to an existing entry's payment leg (don't double-post receipt-first entries); else create
-- ⬜ Import dedup via `external_id` / content hash
-- ⬜ Map pre-categorized exports (e.g. rental expense CSV) → accounts + property
+- ✅ `import_transactions` — parse bank CSV with shape profiles (`signed-amount`, `debit-credit`, `rental-export`; RFC-4180 via `csv-parse`); **preview → confirm** (`mode='preview'`/`'commit'`) before writing
+- ✅ Import **match-or-create**: preview flags a statement line whose amount matches an existing payment-leg posting (± date window) so receipt-first entries aren't double-posted; unflagged rows create on confirm
+- ✅ Import dedup via `external_id` content hash (idempotent re-import; same-file duplicate lines kept distinct)
+- 🚧 Map pre-categorized exports (e.g. rental export) → accounts + property — parser surfaces category/property *hints*; auto-mapping to accounts via rules is the next item
 - ⬜ Auto-categorization `rules` + `categorize_transaction` (apply/override; personal vs business)
 
 ## P2 — Receipts & reconciliation ⬜

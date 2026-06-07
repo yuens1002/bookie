@@ -52,12 +52,14 @@ The full, always-current tool reference lives in [`docs/TOOLS.md`](docs/TOOLS.md
 
 | Tool | What it does |
 |------|--------------|
-| `manage_accounts` | Create/list/archive accounts (personal vs business; Schedule C lines) |
+| `manage_accounts` | Create/list/archive accounts (segment-scoped categories carry a tax line) |
 | `add_transaction` | Record one balanced double-entry (money flows from → to) |
+| `split_transaction` | One payment leg + N category legs (a receipt split across categories) |
+| `import_transactions` | Import a bank/card CSV as balanced entries — preview → confirm, with dedup |
 | `query_transactions` | List entries + postings by date range / account |
 | `account_balances` | Current balance per account |
 
-More — CSV import, categorization rules, receipts, reconciliation & tax reports, email delivery — are on the [roadmap](docs/ROADMAP.md).
+More — categorization rules, receipts, reconciliation & tax reports, email delivery — are on the [roadmap](docs/ROADMAP.md).
 
 ## Configuration
 
