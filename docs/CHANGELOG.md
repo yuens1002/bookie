@@ -17,6 +17,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `CONTRIBUTING.md` — setup, conventions, and test workflow.
 
 ### Changed
+- Extended the (previously unused) `Rule` model — `RuleAction` enum (`categorize` / `exclude`), nullable `accountId` (null for `exclude`), optional `propertyId`, and a `priority` index. Groundwork for the categorization-rules engine (`manage_rules` + import auto-suggestion) landing next.
 - Replaced the binary `personal|business` account flag with the Segment model: income/expense accounts carry a `segmentId` (+ `taxLine`), bank/card accounts stay segment-neutral (one card spans segments); `manage_accounts`/`account_balances` use `segmentId` instead of `entity`. Units are not tracked (properties are).
 - Reworded the project tagline (README + `package.json`) so "personal and business finances" (scope) and "double-entry accounting" (method) read as two distinct ideas, not one compound term.
 - README tool table now lists `split_transaction` and `import_transactions`; "CSV import" moved from the roadmap line to shipped.
