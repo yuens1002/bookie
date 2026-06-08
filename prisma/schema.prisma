@@ -35,6 +35,14 @@ enum TaxSchedule {
   E
 }
 
+/// What a categorization rule does to a matched line. `categorize` routes it to
+/// an account (and optionally a property); `exclude` skips it on import (e.g. the
+/// mirror leg of a transfer already booked from the other account's statement).
+enum RuleAction {
+  categorize
+  exclude
+}
+
 /// A line of business (or "personal"). Each is its own P&L and tax filing, but
 /// they share one ledger so they can be combined at year-end. Extensible — a new
 /// venture is a new row. Segment lives on income/expense accounts; bank/card
@@ -81,6 +89,7 @@ model Property {
   createdAt DateTime @default(now()) @map("created_at")
 
   entries JournalEntry[]
+  rules   Rule[]
 
   @@map("properties")
 }
@@ -120,15 +129,23 @@ model Posting {
   @@map("postings")
 }
 
-/// Auto-categorization rule: a description pattern maps to a target account.
+/// Auto-categorization rule: a case-insensitive description substring maps to an
+/// action. `categorize` rules carry a target `accountId` (and optional
+/// `propertyId`); `exclude` rules carry neither (the matched line is skipped on
+/// import). Higher `priority` wins; ties break on longer pattern, then createdAt.
 model Rule {
-  id        String @id
-  pattern   String
-  accountId String @map("account_id")
-  priority  Int    @default(0)
+  id         String     @id
+  pattern    String
+  action     RuleAction @default(categorize)
+  accountId  String?    @map("account_id") // required when action=categorize; null when exclude
+  propertyId String?    @map("property_id") // optional: tag matched rental (Schedule E) entries
+  priority   Int        @default(0)
+  createdAt  DateTime   @default(now()) @map("created_at")
 
-  account Account @relation(fields: [accountId], references: [id])
+  account  Account?  @relation(fields: [accountId], references: [id])
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
 
+  @@index([priority])
   @@map("rules")
 }
 

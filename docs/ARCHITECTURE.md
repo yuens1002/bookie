@@ -28,7 +28,7 @@ Data          src/db/*           ← Prisma client; schema in prisma/schema.pris
 - **properties** — a rental property (Schedule E is filed per property; units are not tracked). `journal_entries.propertyId` tags rental entries.
 - **journal_entries** — one balanced transaction (date, description, memo, source, `external_id` for import dedup, optional `propertyId`).
 - **postings** — legs of an entry. `amount` is **signed integer minor units** (cents): debit positive, credit negative. Postings of an entry always sum to zero.
-- **rules** — `pattern → account` for auto-categorization (priority-ordered).
+- **rules** — auto-categorization: a case-insensitive description substring maps to an action — `categorize` (a target account, optionally a property) or `exclude` (skip the line on import). Priority-ordered.
 - **receipts** — structured receipt data linked to an entry.
 
 `add_transaction` is sugar over postings: "money flows FROM account A TO account B" creates a debit on B (+) and a credit on A (−).
