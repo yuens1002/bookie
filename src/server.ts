@@ -4,6 +4,7 @@ import { registerSegmentTools } from "./tools/segments.js";
 import { registerPropertyTools } from "./tools/properties.js";
 import { registerTransactionTools } from "./tools/transactions.js";
 import { registerImportTools } from "./tools/import.js";
+import { registerRuleTools } from "./tools/rules.js";
 
 /** Build a fully-configured Bookie MCP server (no transport attached). */
 export function buildServer(): McpServer {
@@ -24,6 +25,7 @@ export function buildServer(): McpServer {
   registerPropertyTools(server);
   registerTransactionTools(server);
   registerImportTools(server);
+  registerRuleTools(server);
 
   return server;
 }

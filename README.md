@@ -56,10 +56,11 @@ The full, always-current tool reference lives in [`docs/TOOLS.md`](docs/TOOLS.md
 | `add_transaction` | Record one balanced double-entry (money flows from → to) |
 | `split_transaction` | One payment leg + N category legs (a receipt split across categories) |
 | `import_transactions` | Import a bank/card CSV as balanced entries — preview → confirm, with dedup |
+| `manage_rules` | Create/list/delete/test auto-categorization rules (categorize → account/property, or exclude) that power import-preview suggestions |
 | `query_transactions` | List entries + postings by date range / account |
 | `account_balances` | Current balance per account |
 
-More — categorization rules, receipts, reconciliation & tax reports, email delivery — are on the [roadmap](docs/ROADMAP.md).
+More — receipts, reconciliation & tax reports, email delivery — are on the [roadmap](docs/ROADMAP.md).
 
 ## Configuration
 

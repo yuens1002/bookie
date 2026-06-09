@@ -12,6 +12,8 @@ import {
   classifyRows,
   type ExistingPosting,
 } from "../domain/import/match.js";
+import { matchRule } from "../domain/import/rules.js";
+import { loadRuleSpecs } from "./rules.js";
 
 const DEFAULT_WINDOW_DAYS = 4;
 
@@ -119,6 +121,7 @@ export function registerImportTools(server: McpServer): void {
         }));
 
         const planned = classifyRows({ rows, externalIds, existingExternalIds, existingPostings, windowDays });
+        const ruleSpecs = await loadRuleSpecs();
         const summary = {
           total: planned.length,
           create: planned.filter((r) => r.action === "create").length,
@@ -128,24 +131,28 @@ export function registerImportTools(server: McpServer): void {
 
         return ok({
           mode: "preview",
-          note: "Nothing was written. Review the rows, choose a targetAccountId for each one to import, then call again with mode='commit' and `mappings`.",
+          note: "Nothing was written. Each row carries a `suggested` rule match when one applies — a categorize suggestion gives the targetAccountId (and propertyId) to use in `mappings`; an exclude suggestion means skip the row. Review, then call again with mode='commit' and `mappings`.",
           profile: args.profile,
           paymentAccount,
           windowDays,
           summary,
-          rows: planned.map((r) => ({
-            index: r.index,
-            date: r.date,
-            description: r.description,
-            amount: formatMoney(r.amountMinor),
-            amountMinor: r.amountMinor,
-            direction: r.amountMinor >= 0 ? "in" : "out",
-            action: r.action,
-            ...(r.rawCategory ? { categoryHint: r.rawCategory } : {}),
-            ...(r.rawProperty ? { propertyHint: r.rawProperty } : {}),
-            ...(r.duplicateOf ? { duplicateOf: r.duplicateOf } : {}),
-            ...(r.candidates ? { candidates: r.candidates } : {}),
-          })),
+          rows: planned.map((r) => {
+            const suggested = matchRule(r.description, ruleSpecs);
+            return {
+              index: r.index,
+              date: r.date,
+              description: r.description,
+              amount: formatMoney(r.amountMinor),
+              amountMinor: r.amountMinor,
+              direction: r.amountMinor >= 0 ? "in" : "out",
+              action: r.action,
+              ...(suggested ? { suggested } : {}),
+              ...(r.rawCategory ? { categoryHint: r.rawCategory } : {}),
+              ...(r.rawProperty ? { propertyHint: r.rawProperty } : {}),
+              ...(r.duplicateOf ? { duplicateOf: r.duplicateOf } : {}),
+              ...(r.candidates ? { candidates: r.candidates } : {}),
+            };
+          }),
         });
       }
 
