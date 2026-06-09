@@ -17,8 +17,9 @@ Phased delivery. Each phase is shippable on its own. Status: ✅ done · 🚧 in
 - ✅ `import_transactions` — parse bank CSV with shape profiles (`signed-amount`, `debit-credit`, `rental-export`; RFC-4180 via `csv-parse`); **preview → confirm** (`mode='preview'`/`'commit'`) before writing
 - ✅ Import **match-or-create**: preview flags a statement line whose amount matches an existing payment-leg posting (± date window) so receipt-first entries aren't double-posted; unflagged rows create on confirm
 - ✅ Import dedup via `external_id` content hash (idempotent re-import; same-file duplicate lines kept distinct)
-- 🚧 Map pre-categorized exports (e.g. rental export) → accounts + property — parser surfaces category/property *hints*; auto-mapping to accounts via rules is the next item
-- ⬜ Auto-categorization `rules` + `categorize_transaction` (apply/override; personal vs business)
+- ✅ Map pre-categorized exports (e.g. rental export) → accounts + property — parser surfaces category/property *hints*; `manage_rules` suggestions resolve them to a target account/property in the import preview
+- ✅ Auto-categorization `rules` — `manage_rules` (create/list/delete/test; `categorize` → account + optional property, or `exclude` → skip; priority-ordered) + per-row `suggested` matches in `import_transactions` preview
+- ⬜ `categorize_transaction` — re-categorize an existing entry / apply a rule to an already-imported entry (Increment 2b)
 
 ## P2 — Receipts & reconciliation ⬜
 - ⬜ Receipt capture: client LLM extracts line items → `split_transaction` (per-category legs) + attach `Receipt` (full itemization in `lineItems`)
