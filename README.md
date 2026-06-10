@@ -71,6 +71,7 @@ See [`.env.example`](.env.example). Key variables: `BOOKIE_TRANSPORT`, `BOOKIE_D
 - [Architecture](docs/ARCHITECTURE.md) — data model, transports, layering
 - [Roadmap](docs/ROADMAP.md) — phased plan
 - [Changelog](docs/CHANGELOG.md) — what shipped
+- [Releasing](docs/RELEASING.md) — versioning + release process
 - [Tools](docs/TOOLS.md) — generated manual
 - [Contributing](CONTRIBUTING.md) — setup, conventions, tests
 

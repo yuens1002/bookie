@@ -1,6 +1,6 @@
 {
   "name": "bookie",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "MCP server that keeps the books for your personal and business finances using double-entry accounting — import bank CSVs, categorize spending, reconcile, and generate US Schedule C tax reports, all driven from your LLM.",
   "type": "module",
   "license": "MIT",
