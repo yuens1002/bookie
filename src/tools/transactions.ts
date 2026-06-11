@@ -280,6 +280,143 @@ export function registerTransactionTools(server: McpServer): void {
     },
   );
 
+  // --- categorize_transaction -----------------------------------------------
+  server.registerTool(
+    "categorize_transaction",
+    {
+      title: "Re-categorize a transaction",
+      description:
+        "Change the category account on an existing journal entry — useful for fixing an imported entry posted to the wrong account, or for categorizing an entry that was added without one. Works on entries with exactly one income/expense leg; for split entries (multiple category legs), delete and re-enter with split_transaction. Supply either targetAccountId (explicit) or ruleId (apply a stored categorize rule). Also accepts propertyId / clearProperty to update the entry's rental-property tag.",
+      inputSchema: {
+        entryId: z.string().describe("Journal entry id (from query_transactions)"),
+        targetAccountId: z
+          .string()
+          .optional()
+          .describe(
+            "New income/expense account id. Use manage_accounts → list. Required unless ruleId is supplied.",
+          ),
+        ruleId: z
+          .string()
+          .optional()
+          .describe(
+            "Apply a stored categorize rule — its accountId (and propertyId if set) are used. Use manage_rules → list.",
+          ),
+        propertyId: z
+          .string()
+          .optional()
+          .describe(
+            "Set or change the rental property tag on the entry (Schedule E). Overrides a rule's propertyId when both are supplied. Use manage_properties → list.",
+          ),
+        clearProperty: z
+          .boolean()
+          .optional()
+          .describe("Set to true to remove the property tag from the entry."),
+      },
+    },
+    async (args) => {
+      if (!args.targetAccountId && !args.ruleId) {
+        return fail("Provide either `targetAccountId` or `ruleId`.");
+      }
+      if (args.targetAccountId && args.ruleId) {
+        return fail("Provide `targetAccountId` or `ruleId`, not both.");
+      }
+
+      // Resolve account from rule when ruleId is given.
+      let resolvedAccountId: string;
+      let rulePropertyId: string | null = null;
+      if (args.ruleId) {
+        const rule = await prisma.rule.findUnique({ where: { id: args.ruleId } });
+        if (!rule) return fail(`No rule with id "${args.ruleId}".`);
+        if (rule.action !== "categorize") {
+          return fail(
+            `Rule "${args.ruleId}" is an exclude rule and has no category account. Use a categorize rule or supply targetAccountId directly.`,
+          );
+        }
+        if (!rule.accountId) {
+          return fail(
+            `Rule "${args.ruleId}" has action=categorize but no accountId — the rule is corrupt. Delete and recreate it.`,
+          );
+        }
+        resolvedAccountId = rule.accountId;
+        rulePropertyId = rule.propertyId;
+      } else {
+        resolvedAccountId = args.targetAccountId!;
+      }
+
+      // Load entry + postings + account types so we can classify legs.
+      const entry = await prisma.journalEntry.findUnique({
+        where: { id: args.entryId },
+        include: { postings: { include: { account: { select: { type: true, name: true } } } } },
+      });
+      if (!entry) return fail(`No transaction with id "${args.entryId}".`);
+
+      const categoryLegs = entry.postings.filter(
+        (p) => p.account.type === "income" || p.account.type === "expense",
+      );
+      if (categoryLegs.length === 0) {
+        return fail("This entry has no income/expense leg to re-categorize.");
+      }
+      if (categoryLegs.length > 1) {
+        return fail(
+          "This entry has multiple category legs (a split transaction). Delete it and re-enter with split_transaction.",
+        );
+      }
+      const leg = categoryLegs[0]!;
+
+      // Validate the target account.
+      const newAccount = await prisma.account.findUnique({
+        where: { id: resolvedAccountId },
+        select: { id: true, name: true, type: true },
+      });
+      if (!newAccount) return fail(`Account "${resolvedAccountId}" does not exist. Use manage_accounts → list.`);
+      if (newAccount.type !== "income" && newAccount.type !== "expense") {
+        return fail(
+          `Account "${newAccount.name}" is type "${newAccount.type}" — categorize_transaction requires an income or expense account.`,
+        );
+      }
+
+      // Resolve property update: explicit arg > rule's property > no change.
+      // null = clear, string = set, undefined = leave as-is.
+      const propertyUpdate: string | null | undefined = args.clearProperty
+        ? null
+        : args.propertyId !== undefined
+          ? args.propertyId
+          : rulePropertyId !== null
+            ? rulePropertyId
+            : undefined;
+
+      if (propertyUpdate !== null && propertyUpdate !== undefined) {
+        const prop = await prisma.property.count({ where: { id: propertyUpdate } });
+        if (prop !== 1) return fail("propertyId does not exist. Use manage_properties → list.");
+      }
+
+      try {
+        await prisma.$transaction(async (tx) => {
+          await tx.posting.update({ where: { id: leg.id }, data: { accountId: resolvedAccountId } });
+          if (propertyUpdate !== undefined) {
+            await tx.journalEntry.update({ where: { id: args.entryId }, data: { propertyId: propertyUpdate } });
+          }
+        });
+      } catch (err) {
+        if (isPrismaCode(err, "P2025")) return fail(`Transaction "${args.entryId}" was deleted before the update could complete.`);
+        if (isPrismaCode(err, "P2003")) return fail("A referenced account or property was deleted before the update could complete.");
+        throw err;
+      }
+
+      return ok({
+        entryId: args.entryId,
+        date: entry.date,
+        description: entry.description,
+        previousAccountId: leg.accountId,
+        previousAccountName: leg.account.name,
+        newAccountId: resolvedAccountId,
+        newAccountName: newAccount.name,
+        ...(propertyUpdate !== undefined ? { propertyId: propertyUpdate } : {}),
+        ...(args.ruleId ? { appliedRuleId: args.ruleId } : {}),
+      });
+    },
+  );
+
   // --- delete_transaction ----------------------------------------------------
   server.registerTool(
     "delete_transaction",

@@ -2,14 +2,14 @@
 
 Phased delivery. Each phase is shippable on its own. Status: ✅ done · 🚧 in progress · ⬜ planned.
 
-## P0 — Ledger foundation 🚧
+## P0 — Ledger foundation ✅
 - ✅ Dual transport (stdio + Streamable HTTP) from one entry point
 - ✅ Neon Postgres via Prisma + seeded US sole-prop chart of accounts (auto-seed on first run)
 - ✅ Double-entry core: `manage_accounts`, `add_transaction`, `query_transactions`, `account_balances`
 - ✅ Auto-generated tool manual (`docs:tools`)
 - ✅ Vitest suite — money helpers (unit) + double-entry tools (integration)
 
-## P1 — Import & categorize 🚧
+## P1 — Import & categorize ✅
 - ✅ Segment model (`manage_segments`) — per-venture P&L + tax form (Sch C/E/none), extensible; income/expense accounts carry a segment + `taxLine`, banking stays segment-neutral
 - ✅ Property dimension: `Property` model, `manage_properties`, `propertyId` on entries (units not tracked)
 - ✅ `delete_transaction` (correct mistakes / remove duplicate imports)
@@ -19,7 +19,7 @@ Phased delivery. Each phase is shippable on its own. Status: ✅ done · 🚧 in
 - ✅ Import dedup via `external_id` content hash (idempotent re-import; same-file duplicate lines kept distinct)
 - ✅ Map pre-categorized exports (e.g. rental export) → accounts + property — parser surfaces category/property *hints*; `manage_rules` suggestions resolve them to a target account/property in the import preview
 - ✅ Auto-categorization `rules` — `manage_rules` (create/list/delete/test; `categorize` → account + optional property, or `exclude` → skip; priority-ordered) + per-row `suggested` matches in `import_transactions` preview
-- ⬜ `categorize_transaction` — re-categorize an existing entry / apply a rule to an already-imported entry (Increment 2b)
+- ✅ `categorize_transaction` — re-categorize an existing entry / apply a rule to an already-imported entry (Increment 2b)
 
 ## P2 — Receipts & reconciliation ⬜
 - ⬜ Receipt capture: client LLM extracts line items → `split_transaction` (per-category legs) + attach `Receipt` (full itemization in `lineItems`)

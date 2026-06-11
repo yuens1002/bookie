@@ -311,3 +311,237 @@ describe("delete_transaction", () => {
     expect(res.isError).toBe(true);
   });
 });
+
+describe("categorize_transaction", () => {
+  const createdRuleIds: string[] = [];
+
+  afterAll(async () => {
+    if (createdRuleIds.length) {
+      await prisma.rule.deleteMany({ where: { id: { in: createdRuleIds } } });
+    }
+  });
+
+  async function addEntry(description: string, amount = 10): Promise<string> {
+    const res = parse(
+      (await client.callTool({
+        name: "add_transaction",
+        arguments: { date: "2026-06-11", description, amount, fromAccountId: bankId, toAccountId: expenseId },
+      })) as CallToolResult,
+    );
+    createdEntryIds.push(res.entryId);
+    return res.entryId;
+  }
+
+  it("re-categorizes the category leg and preserves the zero-sum invariant", async () => {
+    const entryId = await addEntry("TEST categorize happy path", 50);
+
+    const res = parse(
+      (await client.callTool({
+        name: "categorize_transaction",
+        arguments: { entryId, targetAccountId: expense2Id },
+      })) as CallToolResult,
+    );
+    expect(res.entryId).toBe(entryId);
+    expect(res.previousAccountId).toBe(expenseId);
+    expect(res.newAccountId).toBe(expense2Id);
+
+    const postings = await prisma.posting.findMany({ where: { entryId } });
+    expect(postings.reduce((sum, p) => sum + p.amount, 0)).toBe(0);
+    expect(postings.find((p) => p.accountId === expense2Id)?.amount).toBe(5000);
+    expect(postings.find((p) => p.accountId === bankId)?.amount).toBe(-5000);
+  });
+
+  it("applies a stored categorize rule via ruleId", async () => {
+    const rule = await prisma.rule.create({
+      data: { id: newId("rule"), pattern: "TEST rule apply", action: "categorize", accountId: expense2Id, priority: 0 },
+    });
+    createdRuleIds.push(rule.id);
+
+    const entryId = await addEntry("TEST rule apply entry");
+
+    const res = parse(
+      (await client.callTool({
+        name: "categorize_transaction",
+        arguments: { entryId, ruleId: rule.id },
+      })) as CallToolResult,
+    );
+    expect(res.newAccountId).toBe(expense2Id);
+    expect(res.appliedRuleId).toBe(rule.id);
+
+    const postings = await prisma.posting.findMany({ where: { entryId } });
+    expect(postings.reduce((sum, p) => sum + p.amount, 0)).toBe(0);
+  });
+
+  it("sets propertyId on the entry", async () => {
+    const entryId = await addEntry("TEST categorize set property", 100);
+
+    await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId, targetAccountId: expense2Id, propertyId },
+    });
+
+    const entry = await prisma.journalEntry.findUnique({ where: { id: entryId } });
+    expect(entry?.propertyId).toBe(propertyId);
+  });
+
+  it("clears propertyId when clearProperty=true", async () => {
+    const res = parse(
+      (await client.callTool({
+        name: "add_transaction",
+        arguments: {
+          date: "2026-06-11",
+          description: "TEST categorize clear property",
+          amount: 75,
+          fromAccountId: bankId,
+          toAccountId: expenseId,
+          propertyId,
+        },
+      })) as CallToolResult,
+    );
+    createdEntryIds.push(res.entryId);
+
+    await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId: res.entryId, targetAccountId: expense2Id, clearProperty: true },
+    });
+
+    const entry = await prisma.journalEntry.findUnique({ where: { id: res.entryId } });
+    expect(entry?.propertyId).toBeNull();
+  });
+
+  it("errors when neither targetAccountId nor ruleId is supplied", async () => {
+    const entryId = await addEntry("TEST categorize no args");
+    const res = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+  });
+
+  it("errors when both targetAccountId and ruleId are supplied", async () => {
+    const rule = await prisma.rule.create({
+      data: { id: newId("rule"), pattern: "TEST both supplied", action: "categorize", accountId: expense2Id, priority: 0 },
+    });
+    createdRuleIds.push(rule.id);
+
+    const entryId = await addEntry("TEST both supplied");
+    const res = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId, targetAccountId: expense2Id, ruleId: rule.id },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+  });
+
+  it("errors on unknown entryId", async () => {
+    const res = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId: "je_missing", targetAccountId: expense2Id },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+  });
+
+  it("errors on unknown ruleId", async () => {
+    const entryId = await addEntry("TEST unknown ruleId");
+    const res = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId, ruleId: "rule_missing" },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+  });
+
+  it("errors when ruleId refers to an exclude rule", async () => {
+    const rule = await prisma.rule.create({
+      data: { id: newId("rule"), pattern: "TEST exclude rule", action: "exclude", accountId: null, priority: 0 },
+    });
+    createdRuleIds.push(rule.id);
+
+    const entryId = await addEntry("TEST exclude rule entry");
+    const res = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId, ruleId: rule.id },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+  });
+
+  it("errors on an entry with no income/expense leg", async () => {
+    // Insert a transfer entry directly (two asset legs) — unreachable via add_transaction (rejects same from/to)
+    const bank2Id = newId("acc");
+    await prisma.account.create({ data: { id: bank2Id, name: `TEST Bank2 ${bank2Id}`, type: "asset" } });
+    const entryId = newId("je");
+    await prisma.journalEntry.create({
+      data: {
+        id: entryId,
+        date: "2026-06-11",
+        description: "TEST two-asset transfer",
+        source: "manual",
+        postings: {
+          create: [
+            { id: newId("po"), accountId: bankId, amount: -2000 },
+            { id: newId("po"), accountId: bank2Id, amount: 2000 },
+          ],
+        },
+      },
+    });
+    createdEntryIds.push(entryId);
+
+    const callRes = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId, targetAccountId: expenseId },
+    })) as CallToolResult;
+    expect(callRes.isError).toBe(true);
+
+    await prisma.posting.deleteMany({ where: { accountId: bank2Id } });
+    await prisma.account.delete({ where: { id: bank2Id } });
+  });
+
+  it("errors on a split entry (multiple category legs)", async () => {
+    const split = parse(
+      (await client.callTool({
+        name: "split_transaction",
+        arguments: {
+          date: "2026-06-11",
+          description: "TEST split for recategorize",
+          paymentAccountId: bankId,
+          legs: [
+            { accountId: expenseId, amount: 30 },
+            { accountId: expense2Id, amount: 20 },
+          ],
+        },
+      })) as CallToolResult,
+    );
+    createdEntryIds.push(split.entryId);
+
+    const res = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId: split.entryId, targetAccountId: expenseId },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+  });
+
+  it("errors when targetAccountId does not exist", async () => {
+    const entryId = await addEntry("TEST unknown targetAccountId");
+    const res = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId, targetAccountId: "acc_missing" },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+  });
+
+  it("errors when targetAccountId is not an income/expense account", async () => {
+    const entryId = await addEntry("TEST wrong account type");
+    const res = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId, targetAccountId: bankId },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+  });
+
+  it("errors on unknown propertyId", async () => {
+    const entryId = await addEntry("TEST unknown propertyId");
+    const res = (await client.callTool({
+      name: "categorize_transaction",
+      arguments: { entryId, targetAccountId: expense2Id, propertyId: "prop_missing" },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+  });
+});
