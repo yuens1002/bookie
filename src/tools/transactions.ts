@@ -286,7 +286,7 @@ export function registerTransactionTools(server: McpServer): void {
     {
       title: "Re-categorize a transaction",
       description:
-        "Change the category account on an existing journal entry — useful for fixing an imported entry posted to the wrong account, or for categorizing an entry that was added without one. Works on simple 2-leg entries (one payment leg + one category leg); for split entries, delete and re-enter with split_transaction. Supply either targetAccountId (explicit) or ruleId (apply a stored categorize rule). Also accepts propertyId / clearProperty to update the entry's rental-property tag.",
+        "Change the category account on an existing journal entry — useful for fixing an imported entry posted to the wrong account, or for categorizing an entry that was added without one. Works on entries with exactly one income/expense leg; for split entries (multiple category legs), delete and re-enter with split_transaction. Supply either targetAccountId (explicit) or ruleId (apply a stored categorize rule). Also accepts propertyId / clearProperty to update the entry's rental-property tag.",
       inputSchema: {
         entryId: z.string().describe("Journal entry id (from query_transactions)"),
         targetAccountId: z
@@ -332,7 +332,12 @@ export function registerTransactionTools(server: McpServer): void {
             `Rule "${args.ruleId}" is an exclude rule and has no category account. Use a categorize rule or supply targetAccountId directly.`,
           );
         }
-        resolvedAccountId = rule.accountId!;
+        if (!rule.accountId) {
+          return fail(
+            `Rule "${args.ruleId}" has action=categorize but no accountId — the rule is corrupt. Delete and recreate it.`,
+          );
+        }
+        resolvedAccountId = rule.accountId;
         rulePropertyId = rule.propertyId;
       } else {
         resolvedAccountId = args.targetAccountId!;
@@ -380,17 +385,23 @@ export function registerTransactionTools(server: McpServer): void {
             ? rulePropertyId
             : undefined;
 
-      if (propertyUpdate) {
+      if (propertyUpdate !== null && propertyUpdate !== undefined) {
         const prop = await prisma.property.count({ where: { id: propertyUpdate } });
         if (prop !== 1) return fail("propertyId does not exist. Use manage_properties → list.");
       }
 
-      await prisma.$transaction(async (tx) => {
-        await tx.posting.update({ where: { id: leg.id }, data: { accountId: resolvedAccountId } });
-        if (propertyUpdate !== undefined) {
-          await tx.journalEntry.update({ where: { id: args.entryId }, data: { propertyId: propertyUpdate } });
-        }
-      });
+      try {
+        await prisma.$transaction(async (tx) => {
+          await tx.posting.update({ where: { id: leg.id }, data: { accountId: resolvedAccountId } });
+          if (propertyUpdate !== undefined) {
+            await tx.journalEntry.update({ where: { id: args.entryId }, data: { propertyId: propertyUpdate } });
+          }
+        });
+      } catch (err) {
+        if (isPrismaCode(err, "P2025")) return fail(`Transaction "${args.entryId}" was deleted before the update could complete.`);
+        if (isPrismaCode(err, "P2003")) return fail("A referenced account or property was deleted before the update could complete.");
+        throw err;
+      }
 
       return ok({
         entryId: args.entryId,
