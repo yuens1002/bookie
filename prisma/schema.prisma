@@ -121,7 +121,7 @@ model Posting {
   accountId    String  @map("account_id")
   amount       Int // minor units (cents), signed
   cleared      Boolean @default(false)
-  statementRef String? @map("statement_ref") // set on reconcile commit; content hash of the matched statement row
+  statementRef String? @map("statement_ref") // set on reconcile commit; stable identifier: "date|amountMinor|rowIndex"
 
   entry   JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
   account Account      @relation(fields: [accountId], references: [id])

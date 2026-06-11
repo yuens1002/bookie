@@ -192,6 +192,21 @@ describe("reconcile — fail() branches", () => {
     expect(block0.type === "text" && block0.text).toMatch(/does not exist/);
   });
 
+  it("fails when paymentAccountId is an income/expense account (not bank/card)", async () => {
+    const res = (await client.callTool({
+      name: "reconcile",
+      arguments: {
+        mode: "preview",
+        profile: "signed-amount",
+        csv: oneRowCsv("2026-01-10", "Coffee", "-5.00"),
+        paymentAccountId: expenseId, // type=expense — not valid for reconcile
+      },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+    const block0 = res.content[0]!;
+    expect(block0.type === "text" && block0.text).toMatch(/asset or liability/);
+  });
+
   it("fails when CSV is malformed (bad date)", async () => {
     const res = (await client.callTool({
       name: "reconcile",

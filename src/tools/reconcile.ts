@@ -75,6 +75,11 @@ export function registerReconcileTools(server: McpServer): void {
       if (!paymentAccount) {
         return fail("paymentAccountId does not exist. Use manage_accounts → list.");
       }
+      if (paymentAccount.type !== "asset" && paymentAccount.type !== "liability") {
+        return fail(
+          `paymentAccountId must be a bank or card account (type asset or liability); got type "${paymentAccount.type}".`,
+        );
+      }
 
       let rows;
       try {
@@ -105,6 +110,7 @@ export function registerReconcileTools(server: McpServer): void {
           cleared: true,
           entry: { select: { id: true, date: true, description: true } },
         },
+        orderBy: { entry: { date: "asc" } },
       });
 
       const ledgerPostings: LedgerPosting[] = rawPostings.map((p) => ({
@@ -177,9 +183,8 @@ export function registerReconcileTools(server: McpServer): void {
                 where: { id: m.postingId },
                 data: {
                   cleared: true,
-                  statementRef: statementRef(
-                    statementLines.find((l) => l.index === m.statementIndex)!,
-                  ),
+                  // statementLines[i].index === i always (parseCsv assigns row position as index)
+                  statementRef: statementRef(statementLines[m.statementIndex]!),
                 },
               }),
             ),

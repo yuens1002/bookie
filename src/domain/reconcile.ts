@@ -55,6 +55,9 @@ function daysBetween(a: string, b: string): number {
  * Match each statement line to the nearest (first by array order) unmatched
  * ledger posting with the same amount within `windowDays`. Each posting is
  * consumed at most once.
+ *
+ * Pre-indexes postings by amount so the inner loop only scans same-amount
+ * candidates — O(n + m) rather than O(n*m).
  */
 export function matchStatementToLedger(params: {
   statementLines: StatementLine[];
@@ -62,16 +65,25 @@ export function matchStatementToLedger(params: {
   windowDays: number;
 }): ReconcileResult {
   const { statementLines, ledgerPostings, windowDays } = params;
+
+  const postingsByAmount = new Map<number, LedgerPosting[]>();
+  for (const p of ledgerPostings) {
+    const bucket = postingsByAmount.get(p.amount);
+    if (bucket) {
+      bucket.push(p);
+    } else {
+      postingsByAmount.set(p.amount, [p]);
+    }
+  }
+
   const usedPostingIds = new Set<string>();
   const matched: ReconcileMatch[] = [];
   const onStatementNotInLedger: StatementLine[] = [];
 
   for (const line of statementLines) {
-    const posting = ledgerPostings.find(
-      (p) =>
-        !usedPostingIds.has(p.id) &&
-        p.amount === line.amount &&
-        daysBetween(p.date, line.date) <= windowDays,
+    const candidates = postingsByAmount.get(line.amount) ?? [];
+    const posting = candidates.find(
+      (p) => !usedPostingIds.has(p.id) && daysBetween(p.date, line.date) <= windowDays,
     );
 
     if (posting) {
