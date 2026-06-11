@@ -6,6 +6,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- `categorize_transaction` — re-categorize the income/expense leg of an existing journal entry. Accepts `targetAccountId` (explicit) or `ruleId` (apply a stored categorize rule). Also accepts `propertyId` / `clearProperty` to update the entry's rental-property tag. Rejects split entries (>1 category leg) with a pointer to `split_transaction`. Completes P1.
+
 ## [0.2.0] — 2026-06-10
 ### Added
 - `manage_rules` tool + auto-categorization in import — a rule matches a case-insensitive description substring and either routes the line to a category account (`categorize`, optionally tagging a rental property) or marks it to skip on import (`exclude`); higher priority wins, ties break on longer pattern. `import_transactions` preview now shows a per-row `suggested` rule match. Commit still requires explicit `mappings` — rules **suggest**, never auto-post.

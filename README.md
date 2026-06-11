@@ -57,6 +57,7 @@ The full, always-current tool reference lives in [`docs/TOOLS.md`](docs/TOOLS.md
 | `split_transaction` | One payment leg + N category legs (a receipt split across categories) |
 | `import_transactions` | Import a bank/card CSV as balanced entries — preview → confirm, with dedup |
 | `manage_rules` | Create/list/delete/test auto-categorization rules (categorize → account/property, or exclude) that power import-preview suggestions |
+| `categorize_transaction` | Re-categorize the income/expense leg of an existing entry — explicit account or apply a stored rule |
 | `query_transactions` | List entries + postings by date range / account |
 | `account_balances` | Current balance per account |
 
