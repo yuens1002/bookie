@@ -58,10 +58,11 @@ The full, always-current tool reference lives in [`docs/TOOLS.md`](docs/TOOLS.md
 | `import_transactions` | Import a bank/card CSV as balanced entries — preview → confirm, with dedup |
 | `manage_rules` | Create/list/delete/test auto-categorization rules (categorize → account/property, or exclude) that power import-preview suggestions |
 | `categorize_transaction` | Re-categorize the income/expense leg of an existing entry — explicit account or apply a stored rule |
+| `reconcile` | Match a bank/card statement CSV against the ledger and mark postings cleared — preview then commit |
 | `query_transactions` | List entries + postings by date range / account |
 | `account_balances` | Current balance per account |
 
-More — receipts, reconciliation & tax reports, email delivery — are on the [roadmap](docs/ROADMAP.md).
+More — receipts & tax reports, email delivery — are on the [roadmap](docs/ROADMAP.md).
 
 ## Configuration
 

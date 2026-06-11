@@ -116,10 +116,12 @@ model JournalEntry {
 
 /// One leg of a journal entry. `amount` is signed minor units: debit +, credit -.
 model Posting {
-  id        String @id
-  entryId   String @map("entry_id")
-  accountId String @map("account_id")
-  amount    Int // minor units (cents), signed
+  id           String  @id
+  entryId      String  @map("entry_id")
+  accountId    String  @map("account_id")
+  amount       Int // minor units (cents), signed
+  cleared      Boolean @default(false)
+  statementRef String? @map("statement_ref") // set on reconcile commit; content hash of the matched statement row
 
   entry   JournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
   account Account      @relation(fields: [accountId], references: [id])

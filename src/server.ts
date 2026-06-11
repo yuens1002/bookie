@@ -5,6 +5,7 @@ import { registerPropertyTools } from "./tools/properties.js";
 import { registerTransactionTools } from "./tools/transactions.js";
 import { registerImportTools } from "./tools/import.js";
 import { registerRuleTools } from "./tools/rules.js";
+import { registerReconcileTools } from "./tools/reconcile.js";
 
 /** Build a fully-configured Bookie MCP server (no transport attached). */
 export function buildServer(): McpServer {
@@ -26,6 +27,7 @@ export function buildServer(): McpServer {
   registerTransactionTools(server);
   registerImportTools(server);
   registerRuleTools(server);
+  registerReconcileTools(server);
 
   return server;
 }

@@ -7,7 +7,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- `categorize_transaction` — re-categorize the income/expense leg of an existing journal entry. Accepts `targetAccountId` (explicit) or `ruleId` (apply a stored categorize rule). Also accepts `propertyId` / `clearProperty` to update the entry's rental-property tag. Rejects split entries (>1 category leg) with a pointer to `split_transaction`. Completes P1.
+- `reconcile` tool — match a bank/card statement CSV against payment-leg postings and mark them cleared. Two-step: `mode='preview'` (parse + match + report discrepancy buckets; **writes nothing**) then `mode='commit'` (set `cleared=true` + `statementRef` on matched postings). Idempotent: already-cleared postings are reported in an `alreadyCleared` bucket but not re-written. Reports three buckets: `matched` / `onStatementNotInLedger` / `inLedgerNotOnStatement`. Uses the same CSV profiles as `import_transactions`. Pure match engine in `src/domain/reconcile.ts`. Completes P2 Increment 1.
+- `cleared Boolean @default(false)` and `statementRef String?` added to the `Posting` model (reconcile schema migration).
 
 ## [0.2.0] — 2026-06-10
 ### Added
