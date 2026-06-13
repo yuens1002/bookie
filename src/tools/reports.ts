@@ -779,8 +779,12 @@ export function registerReportTools(server: McpServer): void {
 
       const subject = args.subject ?? reportSubject(args.type, args.year, args.month);
       const resend = new Resend(apiKey);
-      const { error } = await resend.emails.send({ from, to: args.to, subject, text: markdown });
-      if (error) return fail(`Resend error: ${error.message}`);
+      try {
+        const { error } = await resend.emails.send({ from, to: args.to, subject, text: markdown });
+        if (error) return fail(`Resend error: ${error.message}`);
+      } catch (err) {
+        return fail(`Resend send failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
 
       return ok({ sent: true, to: args.to, subject });
     },
