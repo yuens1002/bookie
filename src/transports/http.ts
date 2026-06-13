@@ -199,6 +199,6 @@ export async function startHttp(): Promise<void> {
   const port = Number(process.env.PORT ?? 3000);
   serve({ fetch: app.fetch, port });
   console.error(
-    `bookie MCP server ready on http://localhost:${port}/mcp${seeded ? ` (seeded ${seeded} accounts)` : ""}`,
+    `bookie MCP server ready on http://localhost:${port}/mcp (also POST /)${seeded ? ` (seeded ${seeded} accounts)` : ""}`,
   );
 }

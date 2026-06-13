@@ -1,8 +1,8 @@
 # /review report — OAuth 2.0 + Railway deployment (ad-hoc session)
 
-**Branch:** `main` (direct commits — no PR)
-**Generated:** 2026-06-13
-**Commits reviewed:** `6ef3152`, `ba9f484`, `7686e89` + uncommitted diff on `src/transports/http.ts`
+**Branch:** `main` (direct commits — no PR) → follow-up: PR #17 (`fix/oauth-mcp-root-alias-and-docs`, v0.6.1)
+**Generated:** 2026-06-13 (snapshot taken *before* PR #17 landed — F1, F3, and the `.gitignore` item were fixed in that PR)
+**Commits reviewed:** `6ef3152`, `ba9f484`, `7686e89` + uncommitted diff on `src/transports/http.ts` (committed in PR #17)
 
 **Structural exception:** No plan doc or ACs exist for this work — it was ad-hoc. De-facto owning roles: `/backend-architect` (OAuth implementation, schema) and `/devops` (Railway config, deploy docs). Recommendations below are phrased as additions to those role skill files.
 
@@ -28,11 +28,11 @@ The OAuth implementation is functionally correct and deployed, but skipped the b
 | `OAuthToken` Prisma model | `prisma/schema.prisma:159-170` | ✓ shipped |
 | Dual-auth on `/mcp` (static key OR JWT) | `src/transports/http.ts:155-167` | ✓ shipped |
 | `/token` form-body fix (RFC 6749) | `src/transports/http.ts:93-96` | ✓ shipped |
-| `/mcp` root alias for Claude.ai | `src/transports/http.ts:196-197` | **uncommitted** (F1) |
+| `/mcp` root alias for Claude.ai | `src/transports/http.ts:196-197` | ✓ shipped in PR #17 (was uncommitted at review time) |
 
 ### Code changes not tied to any deliverable
 
-- `AGENTS.md` (untracked) — Codex-equivalent of CLAUDE.md; not in `.gitignore`. Needs a gitignore entry before the next commit or it will be staged accidentally.
+- `AGENTS.md` (untracked at review time) — Codex-equivalent of CLAUDE.md; was not in `.gitignore`. ✓ Fixed in PR #17.
 
 ---
 
@@ -63,18 +63,14 @@ No tests were written for any OAuth deliverable. The test gap is MAJOR.
 
 ## Findings
 
-### F1 — Uncommitted fix diverges git from Railway (MAJOR)
-The `/` POST alias (`app.post("/", mcpHandler)`) is deployed to Railway via `railway up` but is **not committed to git**. The repo and the running server are out of sync. Next deploy from git will roll back this fix.
-
-**Fix:** commit and PR the current working tree diff on `src/transports/http.ts`.
+### F1 — Uncommitted fix diverges git from Railway (MAJOR) — ✓ fixed in PR #17
+The `/` POST alias (`app.post("/", mcpHandler)`) was deployed to Railway via `railway up` but was not committed to git at the time of this review. Fixed by PR #17 (`fix/oauth-mcp-root-alias-and-docs`, v0.6.1).
 
 ### F2 — Pre-existing test failure: `bookie://reports/{year}` resource (MAJOR — pre-existing)
 `test/resources-prompts.test.ts > contains the monthly summary table header` fails with `SyntaxError: Unexpected token 'I'` — the resource is returning a Prisma/validation error instead of JSON. Not introduced by OAuth (no overlap with `src/domain/report.ts`), but the test suite is broken and should be fixed before the next feature.
 
-### F3 — `docs/DEPLOYING.md` missing OAuth env vars (MAJOR — docs drift)
-`PUBLIC_URL`, `JWT_SECRET`, and `OAUTH_CLIENT_ID` are absent from the deploy guide's env-var table. Someone cloning and deploying from the README/docs has no Claude.ai connector support and no indication why. The `.env.example` was updated but the deploy doc was not.
-
-**Fix:** add a "Claude.ai connector (OAuth)" section to the env var table and a connector setup sub-section explaining the `/mcp` URL and manual client ID step.
+### F3 — `docs/DEPLOYING.md` missing OAuth env vars (MAJOR — docs drift) — ✓ fixed in PR #17
+`PUBLIC_URL`, `JWT_SECRET`, and `OAUTH_CLIENT_ID` were absent from the deploy guide's env-var table. Fixed by PR #17 which added all three vars to the table and a Claude.ai connector setup section.
 
 ### F4 — Open redirect in `/authorize` (MINOR — security)
 `redirect_uri` is accepted as-is with no allowlist check:

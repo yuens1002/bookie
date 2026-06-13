@@ -12,9 +12,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- 2026-06-13 — fix(oauth): register MCP handler at root `/` so Claude.ai connector URL works without `/mcp` suffix
-- 2026-06-13 — docs(deploy): add OAuth env vars and Claude.ai connector setup section to DEPLOYING.md
-- 2026-06-13 — chore: add AGENTS.md to .gitignore
+## [0.6.1] — 2026-06-13
+
+### Fixed
+- Register MCP handler at root `/` so Claude.ai connector URL works without `/mcp` suffix
+- Add `PUBLIC_URL`, `JWT_SECRET`, `OAUTH_CLIENT_ID` env vars and Claude.ai connector setup section to `docs/DEPLOYING.md`
+- Add `AGENTS.md` to `.gitignore`
 
 ## [0.6.0] — 2026-06-13
 
