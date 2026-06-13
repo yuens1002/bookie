@@ -229,7 +229,7 @@ function csvEsc(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-const MONTH_NAMES = [
+export const MONTH_NAMES = [
   "January",
   "February",
   "March",

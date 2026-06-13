@@ -8,14 +8,8 @@ import {
   fetchMonthlyData,
   renderScheduleCMarkdown,
   renderScheduleEMarkdown,
+  MONTH_NAMES,
 } from "./tools/reports.js";
-
-// --- helpers -----------------------------------------------------------------
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 
 // --- resource registration ---------------------------------------------------
 
