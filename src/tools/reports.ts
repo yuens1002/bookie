@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Resend } from "resend";
 import { prisma } from "../db/client.js";
 import { formatMoney } from "../lib/money.js";
 import { ok, fail } from "../lib/result.js";
@@ -494,6 +495,16 @@ function formatScheduleEOutput(result: ScheduleEResult, type: string) {
   };
 }
 
+// --- helpers -----------------------------------------------------------------
+
+function reportSubject(type: string, year: number, month?: number): string {
+  if (type === "monthly-reconciliation" && month != null) {
+    return `Bookie: ${MONTH_NAMES[month - 1]} ${year} Monthly Reconciliation`;
+  }
+  if (type === "schedule-c") return `Bookie: ${year} Schedule C`;
+  return `Bookie: ${year} Schedule E`;
+}
+
 // --- tool registration -------------------------------------------------------
 
 export function registerReportTools(server: McpServer): void {
@@ -691,6 +702,87 @@ export function registerReportTools(server: McpServer): void {
           ? renderScheduleEMarkdown(result)
           : renderScheduleECsv(result);
       return ok({ type: args.type, year: result.year, format: args.format, output: rendered });
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // send_report
+  // -------------------------------------------------------------------------
+  server.registerTool(
+    "send_report",
+    {
+      title: "Send report by email",
+      description:
+        "Run a report and email it via Resend. Same parameters as generate_report plus a recipient address. The report is rendered as markdown and sent as the email body. Requires RESEND_API_KEY and RESEND_FROM env vars.",
+      inputSchema: {
+        type: ReportTypeSchema.describe("Report type."),
+        year: z.number().int().min(2000).max(2100).describe("Report year (e.g. 2025)."),
+        month: z
+          .number()
+          .int()
+          .min(1)
+          .max(12)
+          .optional()
+          .describe(
+            "Report month (1–12). Required for monthly-reconciliation; omit for schedule-c and schedule-e.",
+          ),
+        accountId: z
+          .string()
+          .optional()
+          .describe(
+            "Bank/card account ID for balance section in monthly-reconciliation. Omit for tax report types.",
+          ),
+        to: z.string().email().describe("Recipient email address."),
+        subject: z
+          .string()
+          .optional()
+          .describe(
+            "Email subject line. Defaults to a generated subject based on report type and period.",
+          ),
+      },
+    },
+    async (args) => {
+      // Type-scoped parameter validation (gate 23).
+      if (args.type === "monthly-reconciliation" && args.month == null) {
+        return fail("month is required for type='monthly-reconciliation'.");
+      }
+      if ((args.type === "schedule-c" || args.type === "schedule-e") && args.month != null) {
+        return fail(
+          `month must not be supplied for type='${args.type}' — tax reports cover the full fiscal year (Jan–Dec).`,
+        );
+      }
+      if ((args.type === "schedule-c" || args.type === "schedule-e") && args.accountId) {
+        return fail(
+          `accountId is not applicable for type='${args.type}' — only monthly-reconciliation uses it for balance computation.`,
+        );
+      }
+
+      // Env vars checked at call time so Railway changes take effect without restart.
+      const apiKey = process.env.RESEND_API_KEY;
+      const from = process.env.RESEND_FROM;
+      if (!apiKey) return fail("RESEND_API_KEY is not set — add it to Railway Variables or .env.");
+      if (!from) return fail("RESEND_FROM is not set — add a verified sender address to Railway Variables or .env.");
+
+      // Fetch and render as markdown.
+      let markdown: string;
+      if (args.type === "monthly-reconciliation") {
+        const fetched = await fetchMonthlyData(args.year, args.month!, args.accountId);
+        if (!fetched.ok) return fail(fetched.error);
+        markdown = renderMonthlyMarkdown(fetched.data.result);
+      } else if (args.type === "schedule-c") {
+        const result = await fetchScheduleCData(args.year);
+        markdown = renderScheduleCMarkdown(result);
+      } else {
+        const result = await fetchScheduleEData(args.year);
+        markdown = renderScheduleEMarkdown(result);
+      }
+
+      const subject = args.subject ?? reportSubject(args.type, args.year, args.month);
+      const resend = new Resend(apiKey);
+      const { error } = await resend.emails.send({ from, to: args.to, subject, text: markdown });
+      if (error) return fail(`Resend error: ${error.message}`);
+
+      return ok({ sent: true, to: args.to, subject });
     },
   );
 }

@@ -7,6 +7,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Per-request rate limiting on the HTTP transport: fixed-window per-IP, configurable via `RATE_LIMIT_RPM` env var (default 60 rpm), returns 429 on excess. Exempt: `/health`.
+- Audit logging on the HTTP transport: each `/mcp` request logs `{ts, ip, method, toolName}` to stderr in JSON. Captured by Railway deploy logs.
+- `send_report` tool — run any report (`monthly-reconciliation`, `schedule-c`, `schedule-e`) and email it as markdown via Resend. Requires `RESEND_API_KEY` + `RESEND_FROM` env vars; fails fast with a clear message if either is missing. Same parameter contract as `generate_report`. Completes P4 delivery.
+- `docs/DEPLOYING.md` — step-by-step Railway + Neon production-branch + Resend setup guide; env var reference table.
 
 ### Changed
 
