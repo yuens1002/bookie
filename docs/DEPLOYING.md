@@ -13,7 +13,7 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `BOOKIE_DB_URL` | Yes | Neon **pooled** connection string (for the running server) |
-| `BOOKIE_DB_DIRECT_URL` | Yes | Neon **direct** connection string (for `prisma db push` on deploy) |
+| `BOOKIE_DB_DIRECT_URL` | Yes | Neon **pooled** connection string (same value as `BOOKIE_DB_URL` — Railway cannot reach Neon's direct endpoint) |
 | `BOOKIE_API_KEY` | Yes | Bearer token — the LLM client sends `Authorization: Bearer <key>` |
 | `PORT` | No | HTTP port (default: 3000; Railway sets this automatically) |
 | `RESEND_API_KEY` | For `send_report` | Resend API key (`re_...`) from the Resend dashboard |
@@ -24,10 +24,11 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
 
 1. Create a project at [neon.tech](https://neon.tech).
 2. The default `main` branch is your **production** branch.
-3. From **Connection Details**, copy two strings:
-   - **Pooled connection** → `BOOKIE_DB_URL`
-   - **Direct connection** → `BOOKIE_DB_DIRECT_URL`
-4. The schema applies automatically on first deploy via `npx prisma db push` (in `railway.json`'s `startCommand`). No manual migration step needed.
+3. From **Connection Details**, copy the **pooled** connection string and use it for **both** `BOOKIE_DB_URL` and `BOOKIE_DB_DIRECT_URL`. Railway's network cannot reach Neon's direct (non-pooled) endpoint.
+4. The schema must be pushed manually before the first deploy (and after any future schema change):
+   ```bash
+   railway run --service bookie npx prisma db push
+   ```
 5. Default chart of accounts seeds on first startup if the `Account` table is empty.
 
 > **Local dev:** create a Neon `dev` branch and point your `.env` there so test data never touches the production branch.
