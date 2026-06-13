@@ -73,7 +73,7 @@ beforeAll(async () => {
 
   // Two entries with the SAME description to create suggest candidates.
   // Dates use 2026-01 so they remain within the suggest action's 24-month window
-  // through at least mid-2028 (gate: seed_date + window_months > today + 12_months).
+  // through January 2028 (gate: seed_date + window_months > today + 12_months).
   for (let i = 0; i < 2; i++) {
     const eid = newId("je");
     await prisma.journalEntry.create({

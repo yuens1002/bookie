@@ -49,26 +49,26 @@
 
 ## Findings
 
-### F1 — `MONTH_NAMES` duplicated (minor, DRY violation)
+### F1 — `MONTH_NAMES` duplicated (minor, DRY violation) — ✅ resolved in fix/p5-retro-cleanups
 
-`src/resources.ts:15` and `src/tools/reports.ts:232` each declare the same `const MONTH_NAMES = ["January", ...]` array. When the five rendering helpers were exported from `reports.ts`, `MONTH_NAMES` was not exported alongside them. `src/resources.ts` re-declared it rather than importing it.
+`src/resources.ts:15` and `src/tools/reports.ts:232` each declared the same `const MONTH_NAMES = ["January", ...]` array. When the five rendering helpers were exported from `reports.ts`, `MONTH_NAMES` was not exported alongside them. `src/resources.ts` re-declared it rather than importing it.
 
 **Impact:** Low — both arrays are identical. If a month name is ever corrected (unlikely), one location might be missed.
-**Fix:** Export `MONTH_NAMES` from `src/tools/reports.ts` and remove the re-declaration in `src/resources.ts`.
+**Fixed by:** Exporting `MONTH_NAMES` from `src/tools/reports.ts` and removing the re-declaration from `src/resources.ts` (PR #15 / fix/p5-retro-cleanups).
 
-### F2 — Suggest test seed dates will fall outside the 24-month window by ~Jan 2027 (minor, test fragility)
+### F2 — Suggest test seed dates would fall outside the 24-month window by ~Jan 2028 (minor, test fragility) — ✅ resolved in fix/p5-retro-cleanups
 
-`test/resources-prompts.test.ts:78` seeds entries with `date: "2025-01-0${i + 1}"`. The `suggest` action's query filters `entry: { date: { gte: cutoffStr } }` where `cutoffStr` is 24 months before runtime. Today (2026-06-13) the cutoff is 2024-06, so 2025-01 entries are within the window. By January 2027 the cutoff reaches 2025-01 and the seeded test data falls outside it — the "includes 2+ occurrences" test will start failing.
+`test/resources-prompts.test.ts:78` seeded entries with `date: "2025-01-0${i + 1}"`. The `suggest` action's query filters `entry: { date: { gte: cutoffStr } }` where `cutoffStr` is 24 months before runtime. By January 2028 the cutoff reaches 2026-01 — data seeded at 2025-01 would fall outside it.
 
-**Impact:** None now; test breaks in ~7 months.
-**Fix:** Change seed dates to `2026-01-0${i + 1}` (or any date within ~18 months of today). The unique prefix `PFX` already prevents data collisions with other test suites.
+**Impact:** Test would have broken ~Jan 2028 without code change.
+**Fixed by:** Seed dates updated to `2026-01-0${i + 1}`, which remains within the 24-month window through January 2028 (PR #15 / fix/p5-retro-cleanups).
 
 ---
 
 ## Recommendations
 
-1. **Fix F1 (DRY on MONTH_NAMES)** — export from `reports.ts`, import in `resources.ts`. One-line change, can be in the next PR touching either file.
-2. **Fix F2 (test seed date)** — change `"2025-01-0${i + 1}"` to `"2026-01-0${i + 1}"` in `test/resources-prompts.test.ts`. Can be fixed in the next PR or as a standalone patch.
+1. ~~**Fix F1 (DRY on MONTH_NAMES)**~~ — ✅ resolved in PR #15: `MONTH_NAMES` exported from `reports.ts`, re-declaration removed from `resources.ts`.
+2. ~~**Fix F2 (test seed date)**~~ — ✅ resolved in PR #15: seed dates updated to `2026-01-0N`.
 3. **Future plan authoring** — when a deliverable requires exporting previously-private functions from another module, make that an explicit sub-task or note in the plan (e.g., "D1 requires exporting 5 private helpers from `reports.ts`"). This prevents it showing up as an unlisted code change in `/review`.
 
 ---
