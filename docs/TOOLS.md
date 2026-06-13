@@ -531,7 +531,7 @@ Import a bank/card statement (CSV) for one account, as balanced double-entry tra
 
 **Manage categorization rules**
 
-Create, list, delete, or test auto-categorization rules. A rule matches a case-insensitive substring of a transaction's description and either routes it to a category account (action=categorize, optionally tagging a rental property) or marks it to skip on import (action=exclude — e.g. transfers between your own accounts). Higher priority wins; ties break on longer pattern. These rules power the suggestions shown by import_transactions preview.
+Create, list, delete, test, or get suggestions for auto-categorization rules. A rule matches a case-insensitive substring of a transaction's description and either routes it to a category account (action=categorize, optionally tagging a rental property) or marks it to skip on import (action=exclude — e.g. transfers between your own accounts). Higher priority wins; ties break on longer pattern. These rules power the suggestions shown by import_transactions preview. action=suggest scans past categorizations and returns candidate rules for descriptions with 2+ occurrences that have no existing rule.
 
 **Input schema:**
 
@@ -545,7 +545,8 @@ Create, list, delete, or test auto-categorization rules. A rule matches a case-i
         "list",
         "create",
         "delete",
-        "test"
+        "test",
+        "suggest"
       ]
     },
     "pattern": {
@@ -580,6 +581,12 @@ Create, list, delete, or test auto-categorization rules. A rule matches a case-i
     "description": {
       "type": "string",
       "description": "Sample transaction description to test against the rules (required for test)"
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100,
+      "description": "Maximum number of suggestions to return (suggest only, default 20)."
     }
   },
   "required": [

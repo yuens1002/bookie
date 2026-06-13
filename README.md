@@ -56,7 +56,7 @@ The full, always-current tool reference lives in [`docs/TOOLS.md`](docs/TOOLS.md
 | `add_transaction` | Record one balanced double-entry (money flows from → to) |
 | `split_transaction` | One payment leg + N category legs (a receipt split across categories) |
 | `import_transactions` | Import a bank/card CSV as balanced entries — preview → confirm, with dedup |
-| `manage_rules` | Create/list/delete/test auto-categorization rules (categorize → account/property, or exclude) that power import-preview suggestions |
+| `manage_rules` | Create/list/delete/test/suggest auto-categorization rules (categorize → account/property, or exclude) that power import-preview suggestions; `action=suggest` scans past categorizations and returns candidate rules for descriptions with 2+ occurrences |
 | `categorize_transaction` | Re-categorize the income/expense leg of an existing entry — explicit account or apply a stored rule |
 | `reconcile` | Match a bank/card statement CSV against the ledger and mark postings cleared — preview then commit |
 | `manage_receipts` | Attach, list, or delete structured receipt data (merchant, date, line items) against an entry |
@@ -65,6 +65,25 @@ The full, always-current tool reference lives in [`docs/TOOLS.md`](docs/TOOLS.md
 | `send_report` | Run a report and email it via Resend |
 | `query_transactions` | List entries + postings by date range / account |
 | `account_balances` | Current balance per account |
+
+## Resources
+
+Bookie exposes two MCP resources that an LLM can read without calling a tool:
+
+| Resource URI | MIME type | What it contains |
+|-------------|-----------|-----------------|
+| `bookie://accounts` | `application/json` | All active accounts with their current balances |
+| `bookie://reports/{year}` | `text/markdown` | Annual fiscal snapshot: Schedule C, Schedule E, and a one-row-per-month summary (opening balance, net income, cleared postings count) |
+
+## Prompts
+
+Three canned workflow prompts guide the LLM through common bookkeeping tasks:
+
+| Prompt | Parameters | Purpose |
+|--------|-----------|---------|
+| `monthly-close` | `year`, `month` | Step-by-step month-end close: import CSV → categorize → reconcile → report → (optional) email |
+| `categorize-uncategorized` | _(none)_ | Find journal entries with no income/expense leg and walk through categorizing each |
+| `prepare-tax-summary` | `year` | Generate Schedule C + E, export as markdown and CSV, optionally email |
 
 ## Configuration
 

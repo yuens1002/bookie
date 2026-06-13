@@ -7,6 +7,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- MCP resources: `bookie://accounts` (JSON list of all accounts with current balances) and `bookie://reports/{year}` (annual fiscal snapshot in markdown: Schedule C, Schedule E, and a one-row-per-month summary table).
+- MCP prompts: `monthly-close` (guided month-end close workflow), `categorize-uncategorized` (find and categorize entries lacking an income/expense leg), `prepare-tax-summary` (generate + export annual Schedule C and E).
+- `manage_rules` gains `action='suggest'`: scans past income/expense categorizations, groups by normalized description, and returns candidate rules for descriptions appearing 2+ times with no existing rule matching them. Rejects `accountId`, `pattern`, `id`, and `priority` when `action='suggest'` (gate 23).
 
 ### Changed
 
