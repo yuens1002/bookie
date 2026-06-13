@@ -40,8 +40,8 @@ Register it with Claude Desktop (`claude_desktop_config.json`). Point `BOOKIE_DB
 ```bash
 npm run build
 BOOKIE_TRANSPORT=http BOOKIE_API_KEY=$(openssl rand -hex 32) npm start
-# Streamable HTTP endpoint: POST http://localhost:3000/mcp
-# Health check:            GET  http://localhost:3000/health
+# Streamable HTTP endpoint: POST http://localhost:3000/mcp  (also POST / — used by Claude.ai)
+# Health check:             GET  http://localhost:3000/health
 ```
 
 Deploy to Railway with the included `Dockerfile` / `railway.json` (the start command runs `prisma db push` then boots). See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full walkthrough (Railway + Neon + Resend setup, env var reference).
@@ -87,7 +87,19 @@ Three canned workflow prompts guide the LLM through common bookkeeping tasks:
 
 ## Configuration
 
-See [`.env.example`](.env.example). Key variables: `BOOKIE_TRANSPORT`, `BOOKIE_DB_URL` (+ `BOOKIE_DB_DIRECT_URL`), `BOOKIE_API_KEY`, `RESEND_API_KEY`.
+See [`.env.example`](.env.example) for the full reference. Key variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `BOOKIE_TRANSPORT` | `stdio` (default) or `http` |
+| `BOOKIE_DB_URL` | Neon pooled connection string |
+| `BOOKIE_DB_DIRECT_URL` | Neon direct connection string (for `db push`) |
+| `BOOKIE_API_KEY` | Static Bearer token (Claude Desktop / direct API) |
+| `PUBLIC_URL` | Public HTTPS base URL of the deployed server (Claude.ai connector) |
+| `JWT_SECRET` | HS256 signing secret for OAuth JWT access tokens |
+| `OAUTH_CLIENT_ID` | OAuth client ID (default: `claude-ai-connector`) |
+| `OAUTH_CLIENT_SECRET` | Single-owner gate: `/token` requires a matching `client_secret` |
+| `RESEND_API_KEY` | Resend API key for `send_report` |
 
 ## Docs
 
@@ -101,7 +113,7 @@ See [`.env.example`](.env.example). Key variables: `BOOKIE_TRANSPORT`, `BOOKIE_D
 
 ## Safety
 
-Bookie stores financial data in your Neon Postgres database; connection strings live in `.env` (gitignored) and Railway env vars — never commit them. The HTTP transport is **open unless `BOOKIE_API_KEY` is set** — always set it before exposing the server beyond localhost.
+Bookie stores financial data in your Neon Postgres database; connection strings live in `.env` (gitignored) and Railway env vars — never commit them. The HTTP transport requires auth on every `/mcp` request: either a static Bearer token (`BOOKIE_API_KEY`) or an OAuth JWT issued by the `/token` endpoint. Always set at least one before exposing the server beyond localhost. See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full Claude.ai connector OAuth setup.
 
 ## License
 

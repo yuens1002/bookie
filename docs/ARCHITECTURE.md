@@ -30,6 +30,7 @@ Data          src/db/*           ← Prisma client; schema in prisma/schema.pris
 - **postings** — legs of an entry. `amount` is **signed integer minor units** (cents): debit positive, credit negative. Postings of an entry always sum to zero.
 - **rules** — auto-categorization: a case-insensitive description substring maps to an action — `categorize` (a target account, optionally a property) or `exclude` (skip the line on import). Priority-ordered.
 - **receipts** — structured receipt data linked to an entry.
+- **oauth_tokens** — hashed refresh tokens for the Claude.ai connector OAuth flow. `tokenHash` (SHA-256 hex), `clientId`, `expiresAt` (30-day TTL), `consumed` flag for rotation + replay detection. Expired rows are purged on a 60-second cleanup interval.
 
 `add_transaction` is sugar over postings: "money flows FROM account A TO account B" creates a debit on B (+) and a credit on A (−).
 
@@ -40,9 +41,21 @@ All amounts are integer minor units. Conversion to/from dollars happens only at 
 ## Transports
 
 - **stdio** (`BOOKIE_TRANSPORT=stdio`, default) — for Claude Desktop and local CLI clients. stdout is the protocol channel; logs go to stderr.
-- **Streamable HTTP** (`BOOKIE_TRANSPORT=http`) — Hono app exposing `POST /mcp` (stateless: a fresh server + transport per request) and `GET /health`. Bearer auth via `BOOKIE_API_KEY`. Suitable for mobile consumer LLMs and Railway deploys.
+- **Streamable HTTP** (`BOOKIE_TRANSPORT=http`) — Hono app. Stateless: a fresh MCP server + transport per request. Suitable for mobile consumer LLMs and Railway deploys.
 
-Both share `buildServer()` — transports never differ in capability.
+  **Endpoints:**
+  - `POST /mcp` and `POST /` — MCP handler (both paths accepted; Claude.ai POSTs to the connector base URL `/`)
+  - `GET /health` — liveness check
+  - `GET /.well-known/oauth-authorization-server` — OAuth 2.0 server metadata (RFC 8414)
+  - `GET /.well-known/oauth-protected-resource` — resource metadata
+  - `GET /authorize` — issues an auth code (PKCE S256 required; `redirect_uri` allowlisted)
+  - `POST /token` — exchanges code or refresh token for a JWT access token + refresh token
+
+  **Auth:** Two credentials are accepted on `/mcp`:
+  - Static Bearer token: `Authorization: Bearer <BOOKIE_API_KEY>` — for Claude Desktop / direct API clients
+  - JWT Bearer token: issued by `/token` via OAuth 2.0 Authorization Code + PKCE — for Claude.ai connector. JWTs are HS256, 1-hour TTL, signed with `JWT_SECRET`. Refresh tokens are stored hashed in the `oauth_tokens` table with rotation + replay detection.
+
+Both transports share `buildServer()` — they never differ in capability.
 
 ## Persistence
 
