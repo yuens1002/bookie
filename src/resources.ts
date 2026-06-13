@@ -74,6 +74,9 @@ export function registerResources(server: McpServer): void {
     { description: "Annual fiscal snapshot for the given year: Schedule C, Schedule E, and a monthly summary table." },
     async (uri, { year: yearVar }) => {
       const year = parseInt(String(yearVar), 10);
+      if (!Number.isInteger(year) || year < 2000 || year > 2099) {
+        throw new Error(`Invalid year "${yearVar}". Use a 4-digit year between 2000 and 2099.`);
+      }
 
       // Sch C
       const schedCData = await fetchScheduleCData(year);

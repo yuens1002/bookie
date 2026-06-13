@@ -127,11 +127,15 @@ export function registerRuleTools(server: McpServer): void {
 
           const limit = args.limit ?? 20;
 
-          // Fetch all income/expense postings with their entry descriptions and account info.
-          // Group by normalized description + accountId to find repeated categorizations.
+          // Fetch income/expense postings within the last 24 months to keep the scan bounded.
+          const cutoff = new Date();
+          cutoff.setMonth(cutoff.getMonth() - 24);
+          const cutoffStr = cutoff.toISOString().slice(0, 10);
+
           const postings = await prisma.posting.findMany({
             where: {
               account: { type: { in: ["income", "expense"] } },
+              entry: { date: { gte: cutoffStr } },
             },
             select: {
               accountId: true,

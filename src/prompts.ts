@@ -4,12 +4,12 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 // --- module-scope argument schemas (never constructed inside a handler) ------
 
 const MonthlyCloseArgs = {
-  year: z.string().describe("The fiscal year, e.g. '2025'"),
-  month: z.string().describe("The month number (1–12), e.g. '3' for March"),
+  year: z.string().regex(/^\d{4}$/, "Must be a 4-digit year, e.g. '2025'").describe("The fiscal year, e.g. '2025'"),
+  month: z.string().regex(/^([1-9]|1[0-2])$/, "Must be a month number 1–12").describe("The month number (1–12), e.g. '3' for March"),
 };
 
 const PrepareTaxSummaryArgs = {
-  year: z.string().describe("The fiscal year, e.g. '2025'"),
+  year: z.string().regex(/^\d{4}$/, "Must be a 4-digit year, e.g. '2025'").describe("The fiscal year, e.g. '2025'"),
 };
 
 // --- prompt registration -----------------------------------------------------
@@ -29,7 +29,7 @@ export function registerPrompts(server: McpServer): void {
 Call \`import_transactions\` with \`mode: "preview"\` first to see what rows will be created, including any auto-categorization suggestions from your rules. Once the preview looks right, call \`import_transactions\` again with \`mode: "commit"\` to post the entries.
 
 **Step 2 — Categorize uncategorized entries**
-After import, call \`query_transactions\` for ${year}-${month.padStart(2, "0")} and look for journal entries that have no income or expense posting leg. For each one, decide the correct category account and call \`categorize_transaction\` with the entry id and the target \`accountId\`. If a description repeats and you'd like it auto-categorized in future imports, use \`manage_rules\` with \`action: "create"\` to add a rule.
+After import, call \`query_transactions\` for ${year}-${month.padStart(2, "0")} and look for journal entries that have no income or expense posting leg. For each one, decide the correct category account and call \`categorize_transaction\` with the entry id and the target \`targetAccountId\`. If a description repeats and you'd like it auto-categorized in future imports, use \`manage_rules\` with \`action: "create"\` to add a rule.
 
 **Step 3 — Reconcile against the statement**
 Once entries are categorized, call \`reconcile\` with \`mode: "preview"\` to match your statement CSV against the ledger and see which postings line up. Then call \`reconcile\` with \`mode: "commit"\` to mark them cleared.
@@ -68,7 +68,7 @@ For each uncategorized entry, I'll show you the date, description, and amount. Y
 **Step 3 — Categorize**
 For each entry, call \`categorize_transaction\` with:
 - \`entryId\` — the entry to update
-- \`accountId\` — the income or expense account to post to
+- \`targetAccountId\` — the income or expense account to post to
 - (optionally) \`propertyId\` — to tag it to a Schedule E rental property
 
 **Step 4 — Create rules to prevent repeat work**
