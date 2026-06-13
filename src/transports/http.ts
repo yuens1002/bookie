@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { serve } from "@hono/node-server";
 import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { buildServer } from "../server.js";
 import { bootstrapLedger } from "./bootstrap.js";
 import { requireAuth } from "../lib/auth.js";
@@ -137,7 +137,9 @@ export async function startHttp(): Promise<void> {
   // --- MCP endpoint ------------------------------------------------------------
 
   // Streamable HTTP MCP endpoint. Stateless: one server+transport per request.
-  app.post("/mcp", async (c) => {
+  // Registered at both /mcp and / — Claude.ai may POST to the connector base URL
+  // (root) or to the explicit /mcp path depending on how the connector URL was entered.
+  const mcpHandler = async (c: Context<NodeBindings>) => {
     // Rate limit before auth — protects against unauthenticated floods/brute-force.
     // Use last entry in X-Forwarded-For (Railway appends real client IP; first entry is
     // client-supplied and spoofable).
@@ -189,7 +191,10 @@ export async function startHttp(): Promise<void> {
     await server.connect(transport);
     await transport.handleRequest(incoming, outgoing, body);
     return RESPONSE_ALREADY_SENT;
-  });
+  };
+
+  app.post("/mcp", mcpHandler);
+  app.post("/", mcpHandler);
 
   const port = Number(process.env.PORT ?? 3000);
   serve({ fetch: app.fetch, port });
