@@ -52,6 +52,10 @@ export async function startHttp(): Promise<void> {
 
   const publicUrl = (process.env.PUBLIC_URL ?? "").replace(/\/$/, "");
   const oauthClientId = process.env.OAUTH_CLIENT_ID ?? "claude-ai-connector";
+  const allowedRedirectUris = (process.env.OAUTH_REDIRECT_URIS ?? "https://claude.ai/api/mcp/auth_callback")
+    .split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
 
   app.get("/.well-known/oauth-authorization-server", (c) =>
     c.json({
@@ -74,16 +78,26 @@ export async function startHttp(): Promise<void> {
   );
 
   app.get("/authorize", (c) => {
-    const { client_id, code_challenge, code_challenge_method, redirect_uri, response_type, state } =
+    const { client_id, code_challenge, code_challenge_method, redirect_uri, response_type, state, password } =
       c.req.query();
+
+    // Single-owner gate: if OAUTH_AUTH_SECRET is set, the caller must supply the matching
+    // password query param. Append ?password=<secret> to the connector URL in Claude.ai
+    // settings — Claude.ai forwards connector URL query params to the authorization endpoint.
+    const authSecret = process.env.OAUTH_AUTH_SECRET;
+    if (authSecret && password !== authSecret)
+      return c.json({ error: "access_denied", error_description: "invalid authorization secret" }, 403);
 
     if (response_type !== "code") return c.json({ error: "unsupported_response_type" }, 400);
     if (client_id !== oauthClientId) return c.json({ error: "unauthorized_client" }, 400);
     if (code_challenge_method !== "S256" || !code_challenge)
       return c.json({ error: "invalid_request", error_description: "S256 PKCE required" }, 400);
 
+    if (!redirect_uri || !allowedRedirectUris.includes(redirect_uri))
+      return c.json({ error: "invalid_request", error_description: "redirect_uri not allowed" }, 400);
+
     const code = issueAuthCode(client_id, code_challenge);
-    const location = new URL(redirect_uri ?? "https://claude.ai/api/mcp/auth_callback");
+    const location = new URL(redirect_uri);
     location.searchParams.set("code", code);
     if (state) location.searchParams.set("state", state);
     return c.redirect(location.toString());
