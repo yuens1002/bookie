@@ -36,7 +36,7 @@ function shiftIso(iso: string, days: number): string {
 
 type MonthlyData = { result: MonthlyReportResult; accountName: string | null };
 
-async function fetchMonthlyData(
+export async function fetchMonthlyData(
   year: number,
   month: number,
   accountId: string | undefined,
@@ -139,7 +139,7 @@ async function fetchMonthlyData(
   return { ok: true, data: { result, accountName } };
 }
 
-async function fetchScheduleCData(year: number): Promise<ScheduleCResult> {
+export async function fetchScheduleCData(year: number): Promise<ScheduleCResult> {
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
 
@@ -177,7 +177,7 @@ async function fetchScheduleCData(year: number): Promise<ScheduleCResult> {
   return computeScheduleC(postings, year);
 }
 
-async function fetchScheduleEData(year: number): Promise<ScheduleEResult> {
+export async function fetchScheduleEData(year: number): Promise<ScheduleEResult> {
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
 
@@ -306,7 +306,7 @@ function renderMonthlyCsv(result: MonthlyReportResult): string {
   return rows.join("\n");
 }
 
-function renderScheduleCMarkdown(result: ScheduleCResult): string {
+export function renderScheduleCMarkdown(result: ScheduleCResult): string {
   const lines: string[] = [`# Schedule C — Sole Proprietor P&L (${result.year})`, ""];
   lines.push("## Income");
   if (result.incomeLines.length === 0) {
@@ -351,7 +351,7 @@ function renderScheduleCCsv(result: ScheduleCResult): string {
   return rows.join("\n");
 }
 
-function renderScheduleEMarkdown(result: ScheduleEResult): string {
+export function renderScheduleEMarkdown(result: ScheduleEResult): string {
   const lines: string[] = [`# Schedule E — Rental Real Estate (${result.year})`, ""];
   for (const prop of result.properties) {
     lines.push(`## ${prop.propertyName}`);
