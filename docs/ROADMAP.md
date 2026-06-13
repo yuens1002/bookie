@@ -27,9 +27,9 @@ Phased delivery. Each phase is shippable on its own. Status: ✅ done · 🚧 in
 - ✅ Receipt capture: client LLM extracts line items → `split_transaction` (per-category legs) + attach `Receipt` (full itemization in `lineItems`)
 - ✅ `generate_report` → monthly reconciliation summary (opening/closing balance, categorized totals, uncategorized flagged, discrepancies)
 
-## P3 — Tax & export ⬜
-- ⬜ `generate_report` → fiscal-year tax summary: **Schedule C** (sole-prop P&L by line) and **Schedule E** (per-property rental income/expense by line)
-- ⬜ `export_report` — markdown / CSV
+## P3 — Tax & export ✅
+- ✅ `generate_report` → fiscal-year tax summary: **Schedule C** (sole-prop P&L by line) and **Schedule E** (per-property rental income/expense by line)
+- ✅ `export_report` — markdown / CSV
 
 ## P4 — Remote hardening & delivery ⬜
 - ⬜ Railway deploy guide + Neon production-branch wiring
