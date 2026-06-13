@@ -44,7 +44,7 @@ BOOKIE_TRANSPORT=http BOOKIE_API_KEY=$(openssl rand -hex 32) npm start
 # Health check:            GET  http://localhost:3000/health
 ```
 
-Deploy to Railway with the included `Dockerfile` / `railway.json` (the start command runs `prisma db push` then boots). Set `BOOKIE_API_KEY` (clients send `Authorization: Bearer <key>`) and point `BOOKIE_DB_URL` + `BOOKIE_DB_DIRECT_URL` at your [Neon](https://neon.tech) Postgres **production** branch — **the same DB your local server uses.** Every instance reads and writes the one and only ledger; there is no local copy to reconcile.
+Deploy to Railway with the included `Dockerfile` / `railway.json` (the start command runs `prisma db push` then boots). See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full walkthrough (Railway + Neon + Resend setup, env var reference).
 
 ## Tools
 
@@ -59,10 +59,12 @@ The full, always-current tool reference lives in [`docs/TOOLS.md`](docs/TOOLS.md
 | `manage_rules` | Create/list/delete/test auto-categorization rules (categorize → account/property, or exclude) that power import-preview suggestions |
 | `categorize_transaction` | Re-categorize the income/expense leg of an existing entry — explicit account or apply a stored rule |
 | `reconcile` | Match a bank/card statement CSV against the ledger and mark postings cleared — preview then commit |
+| `manage_receipts` | Attach, list, or delete structured receipt data (merchant, date, line items) against an entry |
+| `generate_report` | Monthly reconciliation summary, or fiscal-year Schedule C / Schedule E tax P&L |
+| `export_report` | Render any report as markdown or CSV |
+| `send_report` | Run a report and email it via Resend |
 | `query_transactions` | List entries + postings by date range / account |
 | `account_balances` | Current balance per account |
-
-More — receipts & tax reports, email delivery — are on the [roadmap](docs/ROADMAP.md).
 
 ## Configuration
 
@@ -71,6 +73,7 @@ See [`.env.example`](.env.example). Key variables: `BOOKIE_TRANSPORT`, `BOOKIE_D
 ## Docs
 
 - [Architecture](docs/ARCHITECTURE.md) — data model, transports, layering
+- [Deploying](docs/DEPLOYING.md) — Railway + Neon + Resend setup
 - [Roadmap](docs/ROADMAP.md) — phased plan
 - [Changelog](docs/CHANGELOG.md) — what shipped
 - [Releasing](docs/RELEASING.md) — versioning + release process
