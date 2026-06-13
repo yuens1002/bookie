@@ -12,6 +12,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- 2026-06-13 — fix(oauth): allowlist redirect_uri in /authorize; purge expired refresh tokens; add OAuth test suite
+
 ## [0.6.1] — 2026-06-13
 
 ### Fixed

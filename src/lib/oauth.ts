@@ -12,6 +12,8 @@ setInterval(() => {
   for (const [code, entry] of authCodes) {
     if (entry.expiresAt < now) authCodes.delete(code);
   }
+  // Purge expired DB refresh tokens to prevent unbounded table growth.
+  prisma.oAuthToken.deleteMany({ where: { expiresAt: { lt: new Date() } } }).catch(() => {});
 }, 60_000).unref();
 
 export function issueAuthCode(clientId: string, codeChallenge: string): string {

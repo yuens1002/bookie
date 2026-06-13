@@ -52,6 +52,10 @@ export async function startHttp(): Promise<void> {
 
   const publicUrl = (process.env.PUBLIC_URL ?? "").replace(/\/$/, "");
   const oauthClientId = process.env.OAUTH_CLIENT_ID ?? "claude-ai-connector";
+  const allowedRedirectUris = (process.env.OAUTH_REDIRECT_URIS ?? "https://claude.ai/api/mcp/auth_callback")
+    .split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
 
   app.get("/.well-known/oauth-authorization-server", (c) =>
     c.json({
@@ -82,8 +86,12 @@ export async function startHttp(): Promise<void> {
     if (code_challenge_method !== "S256" || !code_challenge)
       return c.json({ error: "invalid_request", error_description: "S256 PKCE required" }, 400);
 
+    const resolvedRedirectUri = redirect_uri ?? allowedRedirectUris[0];
+    if (!resolvedRedirectUri || !allowedRedirectUris.includes(resolvedRedirectUri))
+      return c.json({ error: "invalid_request", error_description: "redirect_uri not allowed" }, 400);
+
     const code = issueAuthCode(client_id, code_challenge);
-    const location = new URL(redirect_uri ?? "https://claude.ai/api/mcp/auth_callback");
+    const location = new URL(resolvedRedirectUri);
     location.searchParams.set("code", code);
     if (state) location.searchParams.set("state", state);
     return c.redirect(location.toString());
