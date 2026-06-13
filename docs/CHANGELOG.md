@@ -7,6 +7,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Receipt file storage via Railway Bucket: `manage_receipts action='attach'` now accepts optional `fileContent` (base64) + `mimeType` to upload the original receipt image or PDF to S3-compatible object storage; a signed download URL (1-hour TTL) is returned. New `action='get_url'` refreshes the URL on demand. `action='delete'` removes the stored file alongside the DB row. `action='list'` surfaces `hasFile` and `mimeType` per receipt. Storage uses Railway's injected `ENDPOINT`, `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `REGION` env vars; structured receipt data continues to save even when no bucket is configured.
+- `src/domain/blob.ts` — thin S3 client wrapper (`uploadFile`, `getSignedDownloadUrl`, `deleteFile`) using `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`
 
 ### Changed
 

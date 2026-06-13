@@ -657,7 +657,7 @@ Match a bank/card statement (CSV) against the ledger to mark postings as cleared
 
 **Manage receipts**
 
-Attach, list, or delete structured receipt data on a journal entry. The client LLM extracts merchant, date, total, and line items from a receipt image or text; pass the extracted fields here to store them against an existing entry. One entry can have multiple receipts (e.g. a paper receipt + an email confirmation).
+Attach, list, delete, or retrieve a download URL for receipt data linked to a journal entry. The client LLM extracts merchant, date, total, and line items from a receipt image or text; pass the extracted fields here to store them against an existing entry. Optionally pass the original file as base64 to archive it in Railway Bucket storage — a signed download URL (1-hour TTL) is returned. One entry can have multiple receipts.
 
 **Input schema:**
 
@@ -670,9 +670,10 @@ Attach, list, or delete structured receipt data on a journal entry. The client L
       "enum": [
         "attach",
         "list",
-        "delete"
+        "delete",
+        "get_url"
       ],
-      "description": "attach = link receipt data to an existing entry. list = query receipts by entry or date range. delete = remove a receipt by id."
+      "description": "attach = link receipt data (and optionally a file) to an entry. list = query receipts by entry or date range. delete = remove a receipt and its stored file. get_url = get a fresh signed download URL for a stored file."
     },
     "entryId": {
       "type": "string",
@@ -720,6 +721,21 @@ Attach, list, or delete structured receipt data on a journal entry. The client L
       },
       "description": "(attach) Itemized line items extracted from the receipt. Amounts are in dollars."
     },
+    "fileContent": {
+      "type": "string",
+      "description": "(attach) Base64-encoded receipt file (JPEG, PNG, WEBP, HEIC, or PDF). Requires Railway Bucket to be configured."
+    },
+    "mimeType": {
+      "type": "string",
+      "enum": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "application/pdf"
+      ],
+      "description": "(attach) MIME type of fileContent. Required when fileContent is provided."
+    },
     "startDate": {
       "type": "string",
       "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
@@ -732,7 +748,7 @@ Attach, list, or delete structured receipt data on a journal entry. The client L
     },
     "receiptId": {
       "type": "string",
-      "description": "(delete) Receipt id to remove."
+      "description": "(delete / get_url) Receipt id."
     }
   },
   "required": [
