@@ -21,11 +21,11 @@ Phased delivery. Each phase is shippable on its own. Status: ✅ done · 🚧 in
 - ✅ Auto-categorization `rules` — `manage_rules` (create/list/delete/test; `categorize` → account + optional property, or `exclude` → skip; priority-ordered) + per-row `suggested` matches in `import_transactions` preview
 - ✅ `categorize_transaction` — re-categorize an existing entry / apply a rule to an already-imported entry (Increment 2b)
 
-## P2 — Receipts & reconciliation 🚧
+## P2 — Receipts & reconciliation ✅
 - ✅ `cleared` marker on the payment posting (+ `statementRef`) so matched entries are tracked
 - ✅ `reconcile` tool — per account, match statement lines ↔ payment-leg postings (amount + date ± window); report matched / in-ledger-not-on-statement / on-statement-not-in-ledger; idempotent commit marks cleared postings
-- ⬜ Receipt capture: client LLM extracts line items → `split_transaction` (per-category legs) + attach `Receipt` (full itemization in `lineItems`)
-- ⬜ `generate_report` → monthly reconciliation summary (opening/closing balance, categorized totals, uncategorized flagged, discrepancies)
+- ✅ Receipt capture: client LLM extracts line items → `split_transaction` (per-category legs) + attach `Receipt` (full itemization in `lineItems`)
+- ✅ `generate_report` → monthly reconciliation summary (opening/closing balance, categorized totals, uncategorized flagged, discrepancies)
 
 ## P3 — Tax & export ⬜
 - ⬜ `generate_report` → fiscal-year tax summary: **Schedule C** (sole-prop P&L by line) and **Schedule E** (per-property rental income/expense by line)
