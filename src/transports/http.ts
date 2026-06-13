@@ -78,15 +78,8 @@ export async function startHttp(): Promise<void> {
   );
 
   app.get("/authorize", (c) => {
-    const { client_id, code_challenge, code_challenge_method, redirect_uri, response_type, state, password } =
+    const { client_id, code_challenge, code_challenge_method, redirect_uri, response_type, state } =
       c.req.query();
-
-    // Single-owner gate: if OAUTH_AUTH_SECRET is set, the caller must supply the matching
-    // password query param. Append ?password=<secret> to the connector URL in Claude.ai
-    // settings — Claude.ai forwards connector URL query params to the authorization endpoint.
-    const authSecret = process.env.OAUTH_AUTH_SECRET;
-    if (authSecret && password !== authSecret)
-      return c.json({ error: "access_denied", error_description: "invalid authorization secret" }, 403);
 
     if (response_type !== "code") return c.json({ error: "unsupported_response_type" }, 400);
     if (client_id !== oauthClientId) return c.json({ error: "unauthorized_client" }, 400);
@@ -109,6 +102,12 @@ export async function startHttp(): Promise<void> {
       ? await c.req.parseBody().catch(() => ({})) as Record<string, string>
       : await c.req.json().catch(() => ({})) as Record<string, string>;
     const grantType = body.grant_type;
+
+    // Single-owner gate: if OAUTH_CLIENT_SECRET is set, validate the client_secret Claude.ai
+    // sends here (from the "OAuth Client Secret" field in the connector settings).
+    const requiredSecret = process.env.OAUTH_CLIENT_SECRET;
+    if (requiredSecret && body.client_secret !== requiredSecret)
+      return c.json({ error: "invalid_client" }, 401);
 
     if (grantType === "authorization_code") {
       const { code, code_verifier, client_id } = body;

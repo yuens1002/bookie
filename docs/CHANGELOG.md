@@ -12,6 +12,11 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+## [0.6.3] — 2026-06-13
+
+### Fixed
+- Move single-owner secret gate from `/authorize` query param to `/token` `client_secret` body field (RFC 6749 compliant); rename env var from `OAUTH_AUTH_SECRET` to `OAUTH_CLIENT_SECRET`
+
 ## [0.6.2] — 2026-06-13
 
 ### Fixed
