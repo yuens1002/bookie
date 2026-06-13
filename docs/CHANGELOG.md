@@ -12,7 +12,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- 2026-06-13 — fix(oauth): allowlist redirect_uri in /authorize; purge expired refresh tokens; add OAuth test suite
+## [0.6.2] — 2026-06-13
+
+### Fixed
+- Validate `redirect_uri` against explicit allowlist in `/authorize`; missing or unlisted URIs return 400
+- Purge expired refresh tokens from `oauth_tokens` DB table on 60-second cleanup interval
+- Add `OAUTH_AUTH_SECRET` single-owner gate on `/authorize`
+- OAuth test suite: auth codes, PKCE S256, JWT sign/verify, refresh token rotation and replay detection
 
 ## [0.6.1] — 2026-06-13
 

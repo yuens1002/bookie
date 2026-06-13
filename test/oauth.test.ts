@@ -18,16 +18,23 @@ const TEST_CLIENT = "test-client";
 
 // Purge any refresh tokens created during this run.
 const createdTokenHashes: string[] = [];
+let savedJwtSecret: string | undefined;
 
 function sha256hex(s: string): string {
   return crypto.createHash("sha256").update(s).digest("hex");
 }
 
 beforeAll(() => {
+  savedJwtSecret = process.env.JWT_SECRET;
   process.env.JWT_SECRET = crypto.randomBytes(32).toString("hex");
 });
 
 afterAll(async () => {
+  if (savedJwtSecret !== undefined) {
+    process.env.JWT_SECRET = savedJwtSecret;
+  } else {
+    delete process.env.JWT_SECRET;
+  }
   if (createdTokenHashes.length) {
     await prisma.oAuthToken.deleteMany({ where: { tokenHash: { in: createdTokenHashes } } });
   }

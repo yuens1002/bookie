@@ -7,13 +7,19 @@ import { prisma } from "../db/client.js";
 type AuthCodeEntry = { clientId: string; codeChallenge: string; expiresAt: number };
 const authCodes = new Map<string, AuthCodeEntry>();
 
+let cleanupInFlight = false;
 setInterval(() => {
   const now = Date.now();
   for (const [code, entry] of authCodes) {
     if (entry.expiresAt < now) authCodes.delete(code);
   }
-  // Purge expired DB refresh tokens to prevent unbounded table growth.
-  prisma.oAuthToken.deleteMany({ where: { expiresAt: { lt: new Date() } } }).catch(() => {});
+  // Purge expired DB refresh tokens — skip if previous run is still in progress.
+  if (cleanupInFlight) return;
+  cleanupInFlight = true;
+  prisma.oAuthToken
+    .deleteMany({ where: { expiresAt: { lt: new Date() } } })
+    .catch((err) => console.error("oauth_tokens cleanup failed:", err))
+    .finally(() => { cleanupInFlight = false; });
 }, 60_000).unref();
 
 export function issueAuthCode(clientId: string, codeChallenge: string): string {
