@@ -6,6 +6,15 @@ import { Hono } from "hono";
 import { buildServer } from "../server.js";
 import { bootstrapLedger } from "./bootstrap.js";
 import { requireAuth } from "../lib/auth.js";
+import {
+  issueAuthCode,
+  consumeAuthCode,
+  verifyPKCE,
+  signAccessToken,
+  verifyAccessToken,
+  issueRefreshToken,
+  rotateRefreshToken,
+} from "../lib/oauth.js";
 
 type NodeBindings = {
   Bindings: { incoming: IncomingMessage; outgoing: ServerResponse };
@@ -39,6 +48,91 @@ export async function startHttp(): Promise<void> {
 
   app.get("/health", (c) => c.json({ ok: true, service: "bookie", transport: "http" }));
 
+  // --- OAuth 2.0 (Claude.ai connector) ----------------------------------------
+
+  const publicUrl = (process.env.PUBLIC_URL ?? "").replace(/\/$/, "");
+  const oauthClientId = process.env.OAUTH_CLIENT_ID ?? "claude-ai-connector";
+
+  app.get("/.well-known/oauth-authorization-server", (c) =>
+    c.json({
+      issuer: publicUrl,
+      authorization_endpoint: `${publicUrl}/authorize`,
+      token_endpoint: `${publicUrl}/token`,
+      response_types_supported: ["code"],
+      grant_types_supported: ["authorization_code", "refresh_token"],
+      code_challenge_methods_supported: ["S256"],
+      token_endpoint_auth_methods_supported: ["none"],
+    }),
+  );
+
+  app.get("/.well-known/oauth-protected-resource", (c) =>
+    c.json({
+      resource: publicUrl,
+      authorization_servers: [publicUrl],
+      bearer_methods_supported: ["header"],
+    }),
+  );
+
+  app.get("/authorize", (c) => {
+    const { client_id, code_challenge, code_challenge_method, redirect_uri, response_type, state } =
+      c.req.query();
+
+    if (response_type !== "code") return c.json({ error: "unsupported_response_type" }, 400);
+    if (client_id !== oauthClientId) return c.json({ error: "unauthorized_client" }, 400);
+    if (code_challenge_method !== "S256" || !code_challenge)
+      return c.json({ error: "invalid_request", error_description: "S256 PKCE required" }, 400);
+
+    const code = issueAuthCode(client_id, code_challenge);
+    const location = new URL(redirect_uri ?? "https://claude.ai/api/mcp/auth_callback");
+    location.searchParams.set("code", code);
+    if (state) location.searchParams.set("state", state);
+    return c.redirect(location.toString());
+  });
+
+  app.post("/token", async (c) => {
+    const body = await c.req.json().catch(() => ({})) as Record<string, string>;
+    const grantType = body.grant_type;
+
+    if (grantType === "authorization_code") {
+      const { code, code_verifier, client_id } = body;
+      if (client_id !== oauthClientId) return c.json({ error: "unauthorized_client" }, 400);
+
+      const entry = consumeAuthCode(code ?? "");
+      if (!entry) return c.json({ error: "invalid_grant" }, 400);
+      if (!verifyPKCE(code_verifier ?? "", entry.codeChallenge))
+        return c.json({ error: "invalid_grant", error_description: "PKCE verification failed" }, 400);
+
+      const [accessToken, refreshToken] = await Promise.all([
+        signAccessToken(client_id),
+        issueRefreshToken(client_id),
+      ]);
+      return c.json(
+        { access_token: accessToken, token_type: "Bearer", expires_in: 3600, refresh_token: refreshToken },
+        200,
+        { "Cache-Control": "no-store", "Pragma": "no-cache" },
+      );
+    }
+
+    if (grantType === "refresh_token") {
+      const result = await rotateRefreshToken(body.refresh_token ?? "");
+      if (!result) return c.json({ error: "invalid_grant" }, 400);
+
+      const [accessToken, newRefreshToken] = await Promise.all([
+        signAccessToken(result.clientId),
+        Promise.resolve(result.newRefreshToken),
+      ]);
+      return c.json(
+        { access_token: accessToken, token_type: "Bearer", expires_in: 3600, refresh_token: newRefreshToken },
+        200,
+        { "Cache-Control": "no-store", "Pragma": "no-cache" },
+      );
+    }
+
+    return c.json({ error: "unsupported_grant_type" }, 400);
+  });
+
+  // --- MCP endpoint ------------------------------------------------------------
+
   // Streamable HTTP MCP endpoint. Stateless: one server+transport per request.
   app.post("/mcp", async (c) => {
     // Rate limit before auth — protects against unauthenticated floods/brute-force.
@@ -53,8 +147,20 @@ export async function startHttp(): Promise<void> {
       return c.json({ error: "rate limit exceeded" }, 429);
     }
 
-    const auth = requireAuth(c.req.header("authorization"));
-    if (!auth.ok) return c.json({ error: auth.error }, 401);
+    const authHeader = c.req.header("authorization") ?? "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : undefined;
+
+    // Accept either: static BOOKIE_API_KEY (Claude Desktop) or OAuth JWT (Claude.ai)
+    const staticAuth = requireAuth(authHeader);
+    const jwtPayload = staticAuth.ok ? null : (bearerToken ? await verifyAccessToken(bearerToken) : null);
+
+    if (!staticAuth.ok && !jwtPayload) {
+      return c.json(
+        { error: "unauthorized" },
+        401,
+        { "WWW-Authenticate": `Bearer realm="${publicUrl}", resource_metadata="${publicUrl}/.well-known/oauth-protected-resource"` },
+      );
+    }
 
     const body = (await c.req.json().catch(() => undefined)) as
       | { method?: string; params?: { name?: string } }
