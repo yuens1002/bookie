@@ -36,10 +36,10 @@ Phased delivery. Each phase is shippable on its own. Status: ✅ done · 🚧 in
 - ✅ Per-request rate limiting and audit logging on HTTP transport
 - ✅ `send_report` — email via Resend
 
-## P5 — Resources & prompts ⬜
-- ⬜ MCP resources: `bookie://accounts`, `bookie://reports/{year}`
-- ⬜ MCP prompts: "monthly close", "categorize uncategorized", "prepare tax summary"
-- ⬜ Learned categorization (promote repeated manual categorizations to rules)
+## P5 — Resources & prompts ✅
+- ✅ MCP resources: `bookie://accounts`, `bookie://reports/{year}`
+- ✅ MCP prompts: "monthly close", "categorize uncategorized", "prepare tax summary"
+- ✅ Learned categorization (`manage_rules action='suggest'` — surface candidate rules from past categorizations)
 
 ## Later / maybe
 - Multi-currency, attachments/blob storage for receipt images, Prisma Migrate (versioned migrations) to replace `db push`, multi-entity isolation for HTTP multi-tenant use.
