@@ -80,6 +80,7 @@ export function registerReportTools(server: McpServer): void {
       // --- all postings in the month -------------------------------------------
       const rawMonthPostings = await prisma.posting.findMany({
         where: { entry: { date: { gte: periodStart, lte: periodEnd } } },
+        orderBy: [{ entry: { date: "asc" } }, { id: "asc" }],
         select: {
           id: true,
           amount: true,
@@ -114,6 +115,7 @@ export function registerReportTools(server: McpServer): void {
       // --- all entries in the month (for uncategorized check) ------------------
       const rawEntries = await prisma.journalEntry.findMany({
         where: { date: { gte: periodStart, lte: periodEnd } },
+        orderBy: [{ date: "asc" }, { id: "asc" }],
         select: {
           id: true,
           date: true,

@@ -164,13 +164,22 @@ export function computeMonthlyReport(input: MonthlyReportInput): MonthlyReportRe
       incomeMinor,
       expensesMinor,
       netMinor: incomeMinor - expensesMinor,
-      accounts: Array.from(accountMap.entries()).map(([accountId, { accountName, totalMinor }]) => ({
-        accountId,
-        accountName,
-        totalMinor,
-      })),
+      // Sort accounts by id for stable output regardless of DB/Map insertion order.
+      accounts: Array.from(accountMap.entries())
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([accountId, { accountName, totalMinor }]) => ({
+          accountId,
+          accountName,
+          totalMinor,
+        })),
     });
   }
+  // Sort segments by id (null last) for stable output.
+  bySegment.sort((a, b) => {
+    if (a.segmentId === null) return 1;
+    if (b.segmentId === null) return -1;
+    return a.segmentId.localeCompare(b.segmentId);
+  });
 
   // --- uncategorized entries --------------------------------------------------
   const uncategorizedEntries: UncategorizedEntry[] = input.monthEntries

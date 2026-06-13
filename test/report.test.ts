@@ -127,7 +127,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await prisma.journalEntry.deleteMany({ where: { id: { in: createdEntryIds } } });
   await prisma.account.deleteMany({ where: { id: { in: [bankId, bizExpenseId, bizIncomeId, equityId] } } });
-  await prisma.segment.delete({ where: { id: segBizId } });
+  await prisma.segment.deleteMany({ where: { id: segBizId } });
   await prisma.$disconnect();
 });
 
@@ -232,6 +232,7 @@ describe("computeMonthlyReport (domain unit)", () => {
   });
 
   it("flags uncleared asset/liability postings as discrepancies", () => {
+    const unclearedId = "po_uncleared_fixed";
     const result = computeMonthlyReport({
       year: 2026,
       month: 10,
@@ -239,14 +240,14 @@ describe("computeMonthlyReport (domain unit)", () => {
       accountName: null,
       preMonthAccountPostings: [],
       monthPostings: [
-        makePosting({ accountType: "asset", cleared: false }),
-        makePosting({ accountType: "asset", cleared: true }), // cleared — not flagged
-        makePosting({ accountType: "expense", cleared: false }), // expense — not flagged
+        makePosting({ id: unclearedId, accountType: "asset", cleared: false }),
+        makePosting({ id: "po_cleared_fixed", accountType: "asset", cleared: true }), // cleared — not flagged
+        makePosting({ id: "po_expense_fixed", accountType: "expense", cleared: false }), // expense — not flagged
       ],
       monthEntries: [],
     });
     expect(result.unclearedPaymentPostings).toHaveLength(1);
-    expect(result.unclearedPaymentPostings[0]!.postingId).toBe(result.unclearedPaymentPostings[0]!.postingId);
+    expect(result.unclearedPaymentPostings[0]!.postingId).toBe(unclearedId);
   });
 });
 

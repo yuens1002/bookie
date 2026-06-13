@@ -131,7 +131,7 @@ export function registerReceiptTools(server: McpServer): void {
             date: r.date,
             total: r.total !== null ? formatMoney(r.total) : null,
             totalMinor: r.total,
-            lineItems: r.lineItems ? (JSON.parse(r.lineItems) as unknown[]) : null,
+            lineItems: r.lineItems ? (() => { try { return JSON.parse(r.lineItems) as unknown[]; } catch { return null; } })() : null,
             createdAt: r.createdAt.toISOString(),
           })),
         );
