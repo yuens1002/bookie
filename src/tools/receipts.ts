@@ -76,6 +76,7 @@ export function registerReceiptTools(server: McpServer): void {
       if (args.action === "attach") {
         if (!args.entryId) return fail("`entryId` is required for action='attach'.");
         if (args.fileContent && !args.mimeType) return fail("`mimeType` is required when `fileContent` is provided.");
+        if (!args.fileContent && args.mimeType) return fail("`fileContent` is required when `mimeType` is provided.");
         if (args.fileContent && !blobConfigured())
           return fail("Receipt file storage is not configured. Add the Railway Bucket to this service.");
 
@@ -106,22 +107,32 @@ export function registerReceiptTools(server: McpServer): void {
         if (args.fileContent && args.mimeType) {
           const buf = Buffer.from(args.fileContent, "base64");
           fileKey = `receipts/${id}`;
-          await uploadFile(fileKey, buf, args.mimeType);
-          fileUrl = await getSignedDownloadUrl(fileKey);
+          try {
+            await uploadFile(fileKey, buf, args.mimeType);
+            fileUrl = await getSignedDownloadUrl(fileKey);
+          } catch (err) {
+            await deleteFile(fileKey).catch(() => {});
+            throw err;
+          }
         }
 
-        await prisma.receipt.create({
-          data: {
-            id,
-            entryId: args.entryId,
-            merchant: args.merchant ?? null,
-            date: args.date ?? null,
-            total: totalMinor,
-            lineItems: lineItemsJson,
-            fileKey,
-            mimeType: args.mimeType ?? null,
-          },
-        });
+        try {
+          await prisma.receipt.create({
+            data: {
+              id,
+              entryId: args.entryId,
+              merchant: args.merchant ?? null,
+              date: args.date ?? null,
+              total: totalMinor,
+              lineItems: lineItemsJson,
+              fileKey,
+              mimeType: fileKey !== null ? (args.mimeType ?? null) : null,
+            },
+          });
+        } catch (err) {
+          if (fileKey) await deleteFile(fileKey).catch(() => {});
+          throw err;
+        }
 
         return ok({
           receiptId: id,
@@ -134,7 +145,7 @@ export function registerReceiptTools(server: McpServer): void {
           totalMinor,
           lineItemCount: args.lineItems?.length ?? 0,
           hasFile: fileKey !== null,
-          mimeType: args.mimeType ?? null,
+          mimeType: fileKey !== null ? (args.mimeType ?? null) : null,
           ...(fileUrl ? { fileUrl, fileUrlExpiresIn: "1 hour" } : {}),
         });
       }
@@ -199,10 +210,14 @@ export function registerReceiptTools(server: McpServer): void {
       const existing = await prisma.receipt.findUnique({ where: { id: args.receiptId } });
       if (!existing) return fail(`No receipt with id "${args.receiptId}".`);
 
+      let fileDeleted = false;
       if (existing.fileKey && blobConfigured()) {
-        await deleteFile(existing.fileKey).catch((err: unknown) => {
+        try {
+          await deleteFile(existing.fileKey);
+          fileDeleted = true;
+        } catch (err) {
           console.error(`blob delete failed for key ${existing.fileKey}:`, err);
-        });
+        }
       }
 
       try {
@@ -217,7 +232,7 @@ export function registerReceiptTools(server: McpServer): void {
         entryId: existing.entryId,
         merchant: existing.merchant,
         date: existing.date,
-        fileDeleted: existing.fileKey !== null && blobConfigured(),
+        fileDeleted,
       });
     },
   );
