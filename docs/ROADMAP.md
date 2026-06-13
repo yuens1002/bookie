@@ -31,10 +31,10 @@ Phased delivery. Each phase is shippable on its own. Status: ✅ done · 🚧 in
 - ✅ `generate_report` → fiscal-year tax summary: **Schedule C** (sole-prop P&L by line) and **Schedule E** (per-property rental income/expense by line)
 - ✅ `export_report` — markdown / CSV
 
-## P4 — Remote hardening & delivery ⬜
-- ⬜ Railway deploy guide + Neon production-branch wiring
-- ⬜ Per-request rate limiting and audit logging on HTTP transport
-- ⬜ `send_report` — email via Resend
+## P4 — Remote hardening & delivery ✅
+- ✅ Railway deploy guide + Neon production-branch wiring
+- ✅ Per-request rate limiting and audit logging on HTTP transport
+- ✅ `send_report` — email via Resend
 
 ## P5 — Resources & prompts ⬜
 - ⬜ MCP resources: `bookie://accounts`, `bookie://reports/{year}`
