@@ -29,7 +29,7 @@ Data          src/db/*           ← Prisma client; schema in prisma/schema.pris
 - **journal_entries** — one balanced transaction (date, description, memo, source, `external_id` for import dedup, optional `propertyId`).
 - **postings** — legs of an entry. `amount` is **signed integer minor units** (cents): debit positive, credit negative. Postings of an entry always sum to zero.
 - **rules** — auto-categorization: a case-insensitive description substring maps to an action — `categorize` (a target account, optionally a property) or `exclude` (skip the line on import). Priority-ordered.
-- **receipts** — structured receipt data linked to an entry.
+- **receipts** — structured receipt data linked to an entry. `fileKey` holds the Railway Bucket object key when the original file was uploaded; `mimeType` records its type. Signed download URLs (1-hour TTL) are generated on demand via `manage_receipts action='get_url'`.
 - **oauth_tokens** — hashed refresh tokens for the Claude.ai connector OAuth flow. `tokenHash` (SHA-256 hex), `clientId`, `expiresAt` (30-day TTL), `consumed` flag for rotation + replay detection. Expired rows are purged on a 60-second cleanup interval.
 
 `add_transaction` is sugar over postings: "money flows FROM account A TO account B" creates a debit on B (+) and a credit on A (−).
@@ -73,6 +73,10 @@ There is a **single Neon Postgres ledger**. Every instance — the local stdio s
 | Direct | `BOOKIE_DB_DIRECT_URL` | `prisma db push` / migrations |
 
 We use **Neon branches** to separate environments while keeping one schema: the `production` branch is the real ledger; a `dev` branch backs local development and tests (and ephemeral branches can back CI). Trade-off of one remote primary: the stdio server needs network connectivity and pays a small per-query round-trip — in exchange, exactly one set of books.
+
+## Blob storage (Railway Bucket)
+
+Receipt files (JPEG, PNG, WEBP, HEIC, PDF) are stored in a Railway-managed S3-compatible bucket (backed by Tigris). The server uses `@aws-sdk/client-s3` with Railway's injected credentials (`ENDPOINT`, `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `REGION`). Files are private; access is via presigned GET URLs (1-hour TTL). Logic lives in `src/domain/blob.ts`. The feature degrades gracefully — if bucket vars are absent, structured receipt data still saves; only `fileContent` upload is blocked.
 
 ## Docs stay in sync
 

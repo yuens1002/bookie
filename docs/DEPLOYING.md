@@ -78,6 +78,18 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
 
 > **Note:** `BOOKIE_API_KEY` and OAuth coexist. Claude Desktop uses the static key; Claude.ai uses OAuth JWT tokens. Both are valid on the same deployed server.
 
+## Railway Bucket setup (for receipt file storage)
+
+Receipt file storage (`manage_receipts` with `fileContent`) uses Railway's built-in S3-compatible object storage.
+
+1. In your Railway project, click **New** → **Storage Bucket**.
+2. Give it a name (e.g. `bookie-receipts`) and click **Create**.
+3. In the bucket's **Connect** tab, click **Add to Service** → select your bookie service.
+   Railway automatically injects `ENDPOINT`, `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, and `REGION` into the service environment.
+4. Redeploy the service — file upload and signed URL retrieval will be available automatically.
+
+> **Without a bucket:** structured receipt data (merchant, date, total, line items) is always stored; only the raw file upload feature is gated on the bucket being configured. The tool returns a clear error if `fileContent` is provided but the bucket vars are absent.
+
 ## Resend setup (for `send_report`)
 
 1. Create an account at [resend.com](https://resend.com).

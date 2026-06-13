@@ -133,6 +133,41 @@ describe("manage_receipts — attach", () => {
     expect(items[1]?.amountMinor).toBe(3000);
   });
 
+  it("fails when fileContent is provided without mimeType", async () => {
+    const entryId = await createEntry("2026-09-03", "Validation Test A");
+    const res = (await client.callTool({
+      name: "manage_receipts",
+      arguments: { action: "attach", entryId, fileContent: "aGVsbG8=" },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+    const block0 = res.content[0]!;
+    expect(block0.type === "text" && block0.text).toMatch(/mimeType.*required/i);
+  });
+
+  it("fails when mimeType is provided without fileContent", async () => {
+    const entryId = await createEntry("2026-09-04", "Validation Test B");
+    const res = (await client.callTool({
+      name: "manage_receipts",
+      arguments: { action: "attach", entryId, mimeType: "image/jpeg" },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+    const block0 = res.content[0]!;
+    expect(block0.type === "text" && block0.text).toMatch(/fileContent.*required/i);
+  });
+
+  it("returns hasFile: false and mimeType: null when no file is attached", async () => {
+    const entryId = await createEntry("2026-09-05", "No File Receipt");
+    const res = parse(
+      (await client.callTool({
+        name: "manage_receipts",
+        arguments: { action: "attach", entryId, merchant: "Cash", date: "2026-09-05", total: 5.0 },
+      })) as CallToolResult,
+    );
+    expect(res.hasFile).toBe(false);
+    expect(res.mimeType).toBeNull();
+    createdReceiptIds.push(res.receiptId as string);
+  });
+
   it("fails when entryId is missing", async () => {
     const res = (await client.callTool({
       name: "manage_receipts",
@@ -188,6 +223,28 @@ describe("manage_receipts — list", () => {
 
     expect(list.length).toBeGreaterThanOrEqual(1);
     expect(list.every((r: any) => r.entryId === entryA)).toBe(true);
+  });
+
+  it("includes hasFile and mimeType on each row", async () => {
+    const entryId = await createEntry("2026-09-12", "List Fields Test");
+    const attached = parse(
+      (await client.callTool({
+        name: "manage_receipts",
+        arguments: { action: "attach", entryId, merchant: "Fields Check", date: "2026-09-12" },
+      })) as CallToolResult,
+    );
+    createdReceiptIds.push(attached.receiptId as string);
+
+    const list = parse(
+      (await client.callTool({
+        name: "manage_receipts",
+        arguments: { action: "list", entryId },
+      })) as CallToolResult,
+    ) as any[];
+
+    expect(list).toHaveLength(1);
+    expect(list[0]).toHaveProperty("hasFile", false);
+    expect(list[0]).toHaveProperty("mimeType", null);
   });
 
   it("filters by date range", async () => {
@@ -259,6 +316,51 @@ describe("manage_receipts — delete", () => {
     const res = (await client.callTool({
       name: "manage_receipts",
       arguments: { action: "delete", receiptId: "rec_doesnotexist" },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+    const block0 = res.content[0]!;
+    expect(block0.type === "text" && block0.text).toMatch(/No receipt/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// get_url
+// ---------------------------------------------------------------------------
+
+describe("manage_receipts — get_url", () => {
+  it("fails when receiptId is missing", async () => {
+    const res = (await client.callTool({
+      name: "manage_receipts",
+      arguments: { action: "get_url" },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+    const block0 = res.content[0]!;
+    expect(block0.type === "text" && block0.text).toMatch(/receiptId.*required/i);
+  });
+
+  it("fails when receipt has no stored file", async () => {
+    const entryId = await createEntry("2026-09-30", "No File Entry");
+    const attached = parse(
+      (await client.callTool({
+        name: "manage_receipts",
+        arguments: { action: "attach", entryId, merchant: "No File" },
+      })) as CallToolResult,
+    );
+    createdReceiptIds.push(attached.receiptId as string);
+
+    const res = (await client.callTool({
+      name: "manage_receipts",
+      arguments: { action: "get_url", receiptId: attached.receiptId },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+    const block0 = res.content[0]!;
+    expect(block0.type === "text" && block0.text).toMatch(/no stored file/i);
+  });
+
+  it("fails when receipt does not exist", async () => {
+    const res = (await client.callTool({
+      name: "manage_receipts",
+      arguments: { action: "get_url", receiptId: "rec_doesnotexist" },
     })) as CallToolResult;
     expect(res.isError).toBe(true);
     const block0 = res.content[0]!;

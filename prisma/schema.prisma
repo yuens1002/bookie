@@ -170,6 +170,7 @@ model OAuthToken {
 }
 
 /// Structured receipt data (extracted by the client LLM, not by this server).
+/// fileKey is the Railway Bucket object key for the original receipt file (if uploaded).
 model Receipt {
   id        String   @id
   entryId   String?  @map("entry_id")
@@ -178,6 +179,8 @@ model Receipt {
   total     Int? // minor units (cents)
   rawText   String?  @map("raw_text")
   lineItems String?  @map("line_items") // JSON string
+  fileKey   String?  @map("file_key") // Railway Bucket object key
+  mimeType  String?  @map("mime_type") // e.g. "image/jpeg", "application/pdf"
   createdAt DateTime @default(now()) @map("created_at")
 
   entry JournalEntry? @relation(fields: [entryId], references: [id], onDelete: SetNull)
