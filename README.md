@@ -17,7 +17,9 @@ npm run db:push             # apply schema to your Neon database
 npm run dev                 # starts on stdio; seeds the default chart on first run
 ```
 
-Register it with Claude Desktop (`claude_desktop_config.json`). Point `BOOKIE_DB_URL` at your **one shared Neon DB** — the same value the deployed HTTP server uses — so local and mobile share one ledger:
+Register it with any MCP-capable environment (Claude Desktop, Cursor, VS Code, or any host that supports the MCP stdio transport). Point `BOOKIE_DB_URL` at your **one shared Neon DB** — the same value the deployed HTTP server uses — so every client shares one ledger.
+
+Example: Claude Desktop (`claude_desktop_config.json`):
 
 ```json
 {
@@ -26,14 +28,15 @@ Register it with Claude Desktop (`claude_desktop_config.json`). Point `BOOKIE_DB
       "command": "node",
       "args": ["/absolute/path/to/bookie/dist/index.js"],
       "env": {
-        "BOOKIE_DB_URL": "postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require"
+        "BOOKIE_DB_URL": "postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require",
+        "BOOKIE_DB_DIRECT_URL": "postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require"
       }
     }
   }
 }
 ```
 
-(Run `npm run build` first, or point `command` at `npx`/`tsx` for dev.)
+(Run `npm run build` first to produce `dist/index.js`, or substitute `tsx src/index.ts` for development.)
 
 ## Quick start (remote, HTTP — for mobile LLMs)
 
