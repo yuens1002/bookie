@@ -18,7 +18,7 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
 | `PUBLIC_URL` | For Claude.ai connector | Public HTTPS base URL of the deployed server, no trailing slash (e.g. `https://your-app.up.railway.app`) |
 | `JWT_SECRET` | For Claude.ai connector | 64-char hex secret for HS256 JWT signing — generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `OAUTH_CLIENT_ID` | For Claude.ai connector | Client ID allowlisted for the connector (default: `claude-ai-connector`) |
-| `OAUTH_AUTH_SECRET` | Recommended | Single-owner gate: if set, `/authorize` requires `?password=<value>`. Append `?password=<value>` to the Claude.ai connector URL — Claude.ai forwards it to `/authorize`. Generate with `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"` |
+| `OAUTH_CLIENT_SECRET` | Recommended | Single-owner gate: if set, `/token` requires a matching `client_secret`. Enter this value in the "OAuth Client Secret" field in Claude.ai connector settings. Generate with `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"` |
 | `OAUTH_REDIRECT_URIS` | For Claude.ai connector | Comma-separated allowlist of permitted `redirect_uri` values (default: `https://claude.ai/api/mcp/auth_callback`) |
 | `PORT` | No | HTTP port (default: 3000; Railway sets this automatically) |
 | `RESEND_API_KEY` | For `send_report` | Resend API key (`re_...`) from the Resend dashboard |
@@ -64,14 +64,15 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
 
 ## Claude.ai connector setup (OAuth)
 
-1. Set `PUBLIC_URL`, `JWT_SECRET`, `OAUTH_CLIENT_ID`, and `OAUTH_AUTH_SECRET` in Railway Variables (see table above).
+1. Set `PUBLIC_URL`, `JWT_SECRET`, `OAUTH_CLIENT_ID`, and `OAUTH_CLIENT_SECRET` in Railway Variables (see table above).
 2. Run the schema migration to create the `oauth_tokens` table:
    ```bash
    railway run --service bookie npx prisma db push
    ```
 3. In Claude.ai → Settings → Connectors → **Add custom connector**:
-   - **URL:** `https://<your-app>.up.railway.app?password=<OAUTH_AUTH_SECRET>` (append your secret as a query param so Claude.ai forwards it to `/authorize`)
+   - **URL:** `https://<your-app>.up.railway.app` (base URL — no suffix)
    - **OAuth Client ID:** `claude-ai-connector` (or whatever you set in `OAUTH_CLIENT_ID`)
+   - **OAuth Client Secret:** the value of `OAUTH_CLIENT_SECRET`
 4. Claude.ai redirects you to `/authorize` → you approve → access token is issued automatically.
 5. Claude.ai will now call bookie tools in conversation.
 
