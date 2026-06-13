@@ -7,6 +7,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `manage_receipts` tool — attach, list, and delete structured receipt data against a journal entry. The client LLM extracts `merchant`, `date`, `total`, and `lineItems` from a receipt image or text; this tool stores them (line-item amounts converted to minor units). One entry can hold multiple receipts. Completes P2 Increment 2.
+- `generate_report` tool — `type='monthly-reconciliation'`: computes opening/closing balance for an optional bank/card account, income and expense totals grouped by segment, uncategorized entries (no income/expense leg flagged for review), and uncleared payment postings (discrepancies). Report logic is pure and deterministic in `src/domain/report.ts`.
 - `reconcile` tool — match a bank/card statement CSV against payment-leg postings and mark them cleared. Two-step: `mode='preview'` (parse + match + report discrepancy buckets; **writes nothing**) then `mode='commit'` (set `cleared=true` + `statementRef` on matched postings). Idempotent: already-cleared postings are reported in an `alreadyCleared` bucket but not re-written. Reports three buckets: `matched` / `onStatementNotInLedger` / `inLedgerNotOnStatement`. Uses the same CSV profiles as `import_transactions`. Pure match engine in `src/domain/reconcile.ts`. Completes P2 Increment 1.
 - `cleared Boolean @default(false)` and `statementRef String?` added to the `Posting` model (reconcile schema migration).
 
