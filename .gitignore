@@ -9,6 +9,7 @@ dist/
 
 # Personal, local-only assistant instructions (not part of the OSS product)
 CLAUDE.md
+AGENTS.md
 .claude/
 private/
 
