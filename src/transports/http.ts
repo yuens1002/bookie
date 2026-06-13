@@ -78,8 +78,15 @@ export async function startHttp(): Promise<void> {
   );
 
   app.get("/authorize", (c) => {
-    const { client_id, code_challenge, code_challenge_method, redirect_uri, response_type, state } =
+    const { client_id, code_challenge, code_challenge_method, redirect_uri, response_type, state, password } =
       c.req.query();
+
+    // Single-owner gate: if OAUTH_AUTH_SECRET is set, the caller must supply the matching
+    // password query param. Append ?password=<secret> to the connector URL in Claude.ai
+    // settings — Claude.ai forwards connector URL query params to the authorization endpoint.
+    const authSecret = process.env.OAUTH_AUTH_SECRET;
+    if (authSecret && password !== authSecret)
+      return c.json({ error: "access_denied", error_description: "invalid authorization secret" }, 403);
 
     if (response_type !== "code") return c.json({ error: "unsupported_response_type" }, 400);
     if (client_id !== oauthClientId) return c.json({ error: "unauthorized_client" }, 400);
