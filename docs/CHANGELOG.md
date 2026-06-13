@@ -7,12 +7,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
-- `generate_report` extended with `type='schedule-c'` and `type='schedule-e'` modes — fiscal-year P&L for sole-proprietor (Schedule C) and rental real estate (Schedule E) segments. Schedule C groups income/expense accounts by `taxLine`; Schedule E groups by property then by `taxLine`. Null `taxLine` → "Unclassified" bucket; entries without `propertyId` on Schedule E accounts → "Unassigned" property bucket. Pure domain engines in `src/domain/tax.ts`. Completes P3 tax reports.
-- `export_report` tool — render any report (`monthly-reconciliation`, `schedule-c`, `schedule-e`) as `markdown` (human-readable) or `csv` (spreadsheet-ready). Re-fetches data fresh; no need to call `generate_report` first.
 
 ### Changed
 
 ### Fixed
+
+## [0.4.0] — 2026-06-13
+
+### Added
+- `generate_report` extended with `type='schedule-c'` and `type='schedule-e'` modes — fiscal-year P&L for sole-proprietor (Schedule C) and rental real estate (Schedule E) segments. Schedule C groups income/expense accounts by `taxLine`; Schedule E groups by property then by `taxLine`. Null `taxLine` → "Unclassified" bucket; entries without `propertyId` on Schedule E accounts → "Unassigned" property bucket. Pure domain engines in `src/domain/tax.ts`. Completes P3 tax reports.
+- `export_report` tool — render any report (`monthly-reconciliation`, `schedule-c`, `schedule-e`) as `markdown` (human-readable) or `csv` (spreadsheet-ready). Re-fetches data fresh; no need to call `generate_report` first.
 
 ## [0.3.0] — 2026-06-13
 
@@ -53,7 +57,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Auto-generated tool reference (`npm run docs:tools`).
 - Docs: README, Architecture, Roadmap, Changelog. Dockerfile + railway.json for deploy.
 
-[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/yuens1002/bookie/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/yuens1002/bookie/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/yuens1002/bookie/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/yuens1002/bookie/releases/tag/v0.1.0
