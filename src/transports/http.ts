@@ -90,7 +90,10 @@ export async function startHttp(): Promise<void> {
   });
 
   app.post("/token", async (c) => {
-    const body = await c.req.json().catch(() => ({})) as Record<string, string>;
+    const contentType = c.req.header("content-type") ?? "";
+    const body = contentType.includes("application/x-www-form-urlencoded")
+      ? await c.req.parseBody().catch(() => ({})) as Record<string, string>
+      : await c.req.json().catch(() => ({})) as Record<string, string>;
     const grantType = body.grant_type;
 
     if (grantType === "authorization_code") {
