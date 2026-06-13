@@ -59,7 +59,7 @@ The full, always-current tool reference lives in [`docs/TOOLS.md`](docs/TOOLS.md
 | `manage_rules` | Create/list/delete/test/suggest auto-categorization rules (categorize → account/property, or exclude) that power import-preview suggestions; `action=suggest` scans past categorizations and returns candidate rules for descriptions with 2+ occurrences |
 | `categorize_transaction` | Re-categorize the income/expense leg of an existing entry — explicit account or apply a stored rule |
 | `reconcile` | Match a bank/card statement CSV against the ledger and mark postings cleared — preview then commit |
-| `manage_receipts` | Attach, list, or delete structured receipt data (merchant, date, line items) against an entry |
+| `manage_receipts` | Attach, list, delete, or get a signed download URL for receipt data; optionally upload the original file (JPEG/PNG/PDF) to Railway Bucket storage |
 | `generate_report` | Monthly reconciliation summary, or fiscal-year Schedule C / Schedule E tax P&L |
 | `export_report` | Render any report as markdown or CSV |
 | `send_report` | Run a report and email it via Resend |
@@ -100,6 +100,7 @@ See [`.env.example`](.env.example) for the full reference. Key variables:
 | `OAUTH_CLIENT_ID` | OAuth client ID (default: `claude-ai-connector`) |
 | `OAUTH_CLIENT_SECRET` | Single-owner gate: `/token` requires a matching `client_secret` |
 | `RESEND_API_KEY` | Resend API key for `send_report` |
+| `ENDPOINT` / `BUCKET` / `ACCESS_KEY_ID` / `SECRET_ACCESS_KEY` / `REGION` | Railway Bucket credentials (auto-injected when you add a bucket to the service) — enables receipt file upload in `manage_receipts` |
 
 ## Docs
 
