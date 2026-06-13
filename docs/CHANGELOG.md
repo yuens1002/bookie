@@ -12,6 +12,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+## [0.6.4] — 2026-06-13
+
+### Changed
+- `docs/ARCHITECTURE.md` — document OAuth 2.0 endpoints, JWT + static Bearer dual-auth, `POST /` root alias, and `oauth_tokens` table
+- `README.md` — expand configuration table to include OAuth env vars; correct Safety section; note `POST /` MCP alias
+
 ## [0.6.3] — 2026-06-13
 
 ### Fixed
