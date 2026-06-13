@@ -223,6 +223,11 @@ async function fetchScheduleEData(year: number): Promise<ScheduleEResult> {
 
 // --- renderers ---------------------------------------------------------------
 
+/** RFC 4180–safe CSV cell: wraps in double-quotes and escapes embedded quotes by doubling. */
+function csvEsc(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
 const MONTH_NAMES = [
   "January",
   "February",
@@ -287,13 +292,13 @@ function renderMonthlyCsv(result: MonthlyReportResult): string {
   for (const seg of result.bySegment) {
     rows.push(
       [
-        `"${seg.segmentName ?? ""}"`,
+        csvEsc(seg.segmentName ?? ""),
         seg.incomeMinor,
-        `"${formatMoney(seg.incomeMinor)}"`,
+        csvEsc(formatMoney(seg.incomeMinor)),
         seg.expensesMinor,
-        `"${formatMoney(seg.expensesMinor)}"`,
+        csvEsc(formatMoney(seg.expensesMinor)),
         seg.netMinor,
-        `"${formatMoney(seg.netMinor)}"`,
+        csvEsc(formatMoney(seg.netMinor)),
       ].join(","),
     );
   }
@@ -331,14 +336,14 @@ function renderScheduleCCsv(result: ScheduleCResult): string {
   for (const l of result.incomeLines) {
     for (const a of l.accounts) {
       rows.push(
-        ["income", `"${l.taxLine}"`, a.accountId, `"${a.accountName}"`, a.totalMinor, `"${formatMoney(a.totalMinor)}"`].join(","),
+        ["income", csvEsc(l.taxLine), a.accountId, csvEsc(a.accountName), a.totalMinor, csvEsc(formatMoney(a.totalMinor))].join(","),
       );
     }
   }
   for (const l of result.expenseLines) {
     for (const a of l.accounts) {
       rows.push(
-        ["expense", `"${l.taxLine}"`, a.accountId, `"${a.accountName}"`, a.totalMinor, `"${formatMoney(a.totalMinor)}"`].join(","),
+        ["expense", csvEsc(l.taxLine), a.accountId, csvEsc(a.accountName), a.totalMinor, csvEsc(formatMoney(a.totalMinor))].join(","),
       );
     }
   }
@@ -378,13 +383,13 @@ function renderScheduleECsv(result: ScheduleEResult): string {
         rows.push(
           [
             prop.propertyId ?? "",
-            `"${prop.propertyName}"`,
+            csvEsc(prop.propertyName),
             "income",
-            `"${l.taxLine}"`,
+            csvEsc(l.taxLine),
             a.accountId,
-            `"${a.accountName}"`,
+            csvEsc(a.accountName),
             a.totalMinor,
-            `"${formatMoney(a.totalMinor)}"`,
+            csvEsc(formatMoney(a.totalMinor)),
           ].join(","),
         );
       }
@@ -394,13 +399,13 @@ function renderScheduleECsv(result: ScheduleEResult): string {
         rows.push(
           [
             prop.propertyId ?? "",
-            `"${prop.propertyName}"`,
+            csvEsc(prop.propertyName),
             "expense",
-            `"${l.taxLine}"`,
+            csvEsc(l.taxLine),
             a.accountId,
-            `"${a.accountName}"`,
+            csvEsc(a.accountName),
             a.totalMinor,
-            `"${formatMoney(a.totalMinor)}"`,
+            csvEsc(formatMoney(a.totalMinor)),
           ].join(","),
         );
       }
@@ -530,6 +535,11 @@ export function registerReportTools(server: McpServer): void {
           `month must not be supplied for type='${args.type}' — tax reports cover the full fiscal year (Jan–Dec).`,
         );
       }
+      if ((args.type === "schedule-c" || args.type === "schedule-e") && args.accountId) {
+        return fail(
+          `accountId is not applicable for type='${args.type}' — only monthly-reconciliation uses it for balance computation.`,
+        );
+      }
 
       if (args.type === "monthly-reconciliation") {
         const fetched = await fetchMonthlyData(args.year, args.month!, args.accountId);
@@ -644,11 +654,16 @@ export function registerReportTools(server: McpServer): void {
           `month must not be supplied for type='${args.type}' — tax reports cover the full fiscal year (Jan–Dec).`,
         );
       }
+      if ((args.type === "schedule-c" || args.type === "schedule-e") && args.accountId) {
+        return fail(
+          `accountId is not applicable for type='${args.type}' — only monthly-reconciliation uses it for balance computation.`,
+        );
+      }
 
       if (args.type === "monthly-reconciliation") {
         const fetched = await fetchMonthlyData(args.year, args.month!, args.accountId);
         if (!fetched.ok) return fail(fetched.error);
-        const { result, accountName: _acctName } = fetched.data;
+        const { result } = fetched.data;
         const rendered =
           args.format === "markdown" ? renderMonthlyMarkdown(result) : renderMonthlyCsv(result);
         return ok({

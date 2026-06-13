@@ -10,11 +10,11 @@
 
 | # | Decision | Choice |
 |---|----------|--------|
-| D1 | Tax report time scope | `year` only (Jan 1–Dec 31). `month` param is ignored for `type='schedule-c'` and `type='schedule-e'`; the tool validates it is not supplied for those types. |
+| D1 | Tax report time scope | `year` only (Jan 1–Dec 31). `month` is **rejected** (not silently ignored) for `type='schedule-c'` and `type='schedule-e'` — supplying it returns a `fail()`. |
 | D2 | Null `taxLine` accounts | Income/expense accounts where `taxLine = null` are grouped into an `"Unclassified"` bucket in both Schedule C and Schedule E outputs. This surfaces accounts the user hasn't tagged yet. |
-| D3 | Schedule E entries without `propertyId` | Postings on Sch E segment accounts whose parent entry has no `propertyId` are grouped into an `"Unassigned property"` bucket. This flags income/expense that hasn't been attributed to a property. |
+| D3 | Schedule E entries without `propertyId` | Postings on Sch E segment accounts whose parent entry has no `propertyId` are grouped into an `"Unassigned"` property bucket (not "Unassigned property"). This flags income/expense that hasn't been attributed to a property. |
 | D4 | `export_report` input shape | Re-runs the same DB query internally rather than accepting the `generate_report` JSON blob as input. Keeps the tool interface small and eliminates a large JSON-paste step. |
-| D5 | `export_report` CSV shape | One row per account line within each group (taxLine or property+taxLine). Columns: `group`, `taxLine`, `accountId`, `accountName`, `amountMinor`, `amount`. Monthly-reconciliation CSV uses `segment`, `taxLine`, `accountId`, `accountName`. |
+| D5 | `export_report` CSV shape | One row per account line within each group. Schedule C: `type,taxLine,accountId,accountName,amountMinor,amount`. Schedule E: `propertyId,propertyName,type,taxLine,accountId,accountName,amountMinor,amount`. Monthly-reconciliation: one row per segment — `segment,incomeMinor,income,expensesMinor,expenses,netMinor,net`. All string cells use RFC 4180 quoting (embedded `"` doubled). |
 | D6 | PR shape | One PR: `feat/p3-tax-export`. Both changes are small and semantically coupled. |
 
 ---
@@ -34,9 +34,9 @@
 
 **New domain file `src/domain/tax.ts`:**
 
-- `computeScheduleC(postings: ReportPosting[], year: number): ScheduleCResult` — pure, no DB.
-- `computeScheduleE(postings: ReportPosting[], entries: ReportEntryWithProperty[], year: number): ScheduleEResult` — pure, no DB.
-- Both reuse `ReportPosting` from `src/domain/report.ts` (no duplication).
+- `computeScheduleC(postings: TaxPosting[], year: number): ScheduleCResult` — pure, no DB.
+- `computeScheduleE(postings: TaxPosting[], year: number): ScheduleEResult` — pure, no DB. Groups by `propertyId` within the postings.
+- Uses own `TaxPosting` interface (extends the ledger fields with `taxLine`, `propertyId`, `propertyName`); does not reuse `ReportPosting`.
 
 ---
 
