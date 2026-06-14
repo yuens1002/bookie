@@ -7,6 +7,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.7.0] — 2026-06-14
+
+### Added
 - Receipt file storage via Railway Bucket: `manage_receipts action='attach'` now accepts optional `fileContent` (base64) + `mimeType` (JPEG, PNG, WEBP, HEIC, or PDF) to upload the original receipt image or PDF to S3-compatible object storage; a signed download URL (1-hour TTL) is returned. New `action='get_url'` refreshes the URL on demand. `action='delete'` removes the stored file alongside the DB row. `action='list'` surfaces `hasFile` and `mimeType` per receipt. Storage uses Railway's injected `AWS_ENDPOINT_URL`, `AWS_S3_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION` env vars (AWS SDK Generic style); structured receipt data continues to save even when no bucket is configured.
 - `src/domain/blob.ts` — thin S3 client wrapper (`uploadFile`, `getSignedDownloadUrl`, `deleteFile`) using `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`
 
@@ -102,7 +110,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Auto-generated tool reference (`npm run docs:tools`).
 - Docs: README, Architecture, Roadmap, Changelog. Dockerfile + railway.json for deploy.
 
-[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/yuens1002/bookie/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/yuens1002/bookie/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/yuens1002/bookie/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/yuens1002/bookie/compare/v0.3.0...v0.4.0
