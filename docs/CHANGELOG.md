@@ -12,6 +12,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 - `import_transactions`: CC/card (liability) accounts now produce correct double-entry postings — a positive CSV charge credits the card and debits the expense; a negative credit/refund debits the card and credits the expense. Previously the signs were inverted, causing CC expenses to appear as negative amounts in reports.
+- Receipt file upload failed with "Region is missing" even when the Railway Bucket was correctly connected. AWS SDK v3 only auto-reads `AWS_REGION`, not the `AWS_DEFAULT_REGION` that Railway injects (the `AWS_DEFAULT_REGION` fallback was v2-only), so `S3Client` resolved no region. `src/domain/blob.ts` now passes `region` explicitly (`AWS_REGION` → `AWS_DEFAULT_REGION` → `"auto"`) and uses `||` so empty-string env vars also fall back correctly.
 
 ## [0.7.0] — 2026-06-14
 
