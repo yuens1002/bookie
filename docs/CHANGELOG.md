@@ -11,9 +11,10 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `src/domain/blob.ts` — thin S3 client wrapper (`uploadFile`, `getSignedDownloadUrl`, `deleteFile`) using `@aws-sdk/client-s3` + `@aws-sdk/s3-request-presigner`
 
 ### Changed
+- `README.md` — stdio quickstart now says "any MCP-capable environment" (Claude Desktop, Cursor, VS Code, …) rather than Claude Desktop only; added `BOOKIE_DB_DIRECT_URL` to the example config block
 
 ### Fixed
-- Receipt file storage: assert `fileDeleted` field on `action='delete'`; add test for "bucket not configured" error path; correct README MIME type list to include WEBP and HEIC; add same-environment note to `docs/DEPLOYING.md` for Railway Bucket setup
+- Receipt file storage: assert `fileDeleted` field on `action='delete'`; add test for "bucket not configured" error path (env-var save/restore pattern); correct README MIME type list to include WEBP and HEIC; add same-environment note to `docs/DEPLOYING.md` for Railway Bucket setup
 
 ## [0.6.4] — 2026-06-13
 
