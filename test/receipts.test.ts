@@ -155,6 +155,18 @@ describe("manage_receipts — attach", () => {
     expect(block0.type === "text" && block0.text).toMatch(/fileContent.*required/i);
   });
 
+  it("fails when fileContent is provided but bucket is not configured", async () => {
+    // Tests run without AWS_* bucket env vars, so this path is always reachable here.
+    const entryId = await createEntry("2026-09-06", "Bucket Not Configured");
+    const res = (await client.callTool({
+      name: "manage_receipts",
+      arguments: { action: "attach", entryId, fileContent: "aGVsbG8=", mimeType: "image/jpeg" },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+    const block0 = res.content[0]!;
+    expect(block0.type === "text" && block0.text).toMatch(/not configured/i);
+  });
+
   it("returns hasFile: false and mimeType: null when no file is attached", async () => {
     const entryId = await createEntry("2026-09-05", "No File Receipt");
     const res = parse(
@@ -292,6 +304,7 @@ describe("manage_receipts — delete", () => {
       })) as CallToolResult,
     );
     expect(del.deleted).toBe(receiptId);
+    expect(del.fileDeleted).toBe(false); // receipt has no file
 
     const list = parse(
       (await client.callTool({
