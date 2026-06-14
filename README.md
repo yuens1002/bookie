@@ -62,7 +62,7 @@ The full, always-current tool reference lives in [`docs/TOOLS.md`](docs/TOOLS.md
 | `manage_rules` | Create/list/delete/test/suggest auto-categorization rules (categorize → account/property, or exclude) that power import-preview suggestions; `action=suggest` scans past categorizations and returns candidate rules for descriptions with 2+ occurrences |
 | `categorize_transaction` | Re-categorize the income/expense leg of an existing entry — explicit account or apply a stored rule |
 | `reconcile` | Match a bank/card statement CSV against the ledger and mark postings cleared — preview then commit |
-| `manage_receipts` | Attach, list, delete, or get a signed download URL for receipt data; optionally upload the original file (JPEG/PNG/PDF) to Railway Bucket storage |
+| `manage_receipts` | Attach, list, delete, or get a signed download URL for receipt data; optionally upload the original file (JPEG, PNG, WEBP, HEIC, or PDF) to Railway Bucket storage |
 | `generate_report` | Monthly reconciliation summary, or fiscal-year Schedule C / Schedule E tax P&L |
 | `export_report` | Render any report as markdown or CSV |
 | `send_report` | Run a report and email it via Resend |

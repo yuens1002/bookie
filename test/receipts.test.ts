@@ -155,6 +155,35 @@ describe("manage_receipts — attach", () => {
     expect(block0.type === "text" && block0.text).toMatch(/fileContent.*required/i);
   });
 
+  it("fails when fileContent is provided but bucket is not configured", async () => {
+    // Explicitly clear bucket env vars so this test is deterministic regardless of local/CI environment.
+    const saved = {
+      AWS_ENDPOINT_URL: process.env.AWS_ENDPOINT_URL,
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+      AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME,
+    };
+    delete process.env.AWS_ENDPOINT_URL;
+    delete process.env.AWS_ACCESS_KEY_ID;
+    delete process.env.AWS_SECRET_ACCESS_KEY;
+    delete process.env.AWS_S3_BUCKET_NAME;
+    try {
+      const entryId = await createEntry("2026-09-06", "Bucket Not Configured");
+      const res = (await client.callTool({
+        name: "manage_receipts",
+        arguments: { action: "attach", entryId, fileContent: "aGVsbG8=", mimeType: "image/jpeg" },
+      })) as CallToolResult;
+      expect(res.isError).toBe(true);
+      const block0 = res.content[0]!;
+      expect(block0.type === "text" && block0.text).toMatch(/not configured/i);
+    } finally {
+      if (saved.AWS_ENDPOINT_URL !== undefined) process.env.AWS_ENDPOINT_URL = saved.AWS_ENDPOINT_URL;
+      if (saved.AWS_ACCESS_KEY_ID !== undefined) process.env.AWS_ACCESS_KEY_ID = saved.AWS_ACCESS_KEY_ID;
+      if (saved.AWS_SECRET_ACCESS_KEY !== undefined) process.env.AWS_SECRET_ACCESS_KEY = saved.AWS_SECRET_ACCESS_KEY;
+      if (saved.AWS_S3_BUCKET_NAME !== undefined) process.env.AWS_S3_BUCKET_NAME = saved.AWS_S3_BUCKET_NAME;
+    }
+  });
+
   it("returns hasFile: false and mimeType: null when no file is attached", async () => {
     const entryId = await createEntry("2026-09-05", "No File Receipt");
     const res = parse(
@@ -292,6 +321,7 @@ describe("manage_receipts — delete", () => {
       })) as CallToolResult,
     );
     expect(del.deleted).toBe(receiptId);
+    expect(del.fileDeleted).toBe(false); // receipt has no file
 
     const list = parse(
       (await client.callTool({
