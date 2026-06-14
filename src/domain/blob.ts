@@ -1,31 +1,32 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-// Railway Bucket injects: ENDPOINT, BUCKET, ACCESS_KEY_ID, SECRET_ACCESS_KEY, REGION
+// Railway Bucket (AWS SDK Generic style) injects:
+//   AWS_ENDPOINT_URL, AWS_S3_BUCKET_NAME, AWS_DEFAULT_REGION,
+//   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+// The SDK auto-reads the AWS_* credential + region + endpoint vars;
+// we only need to pass forcePathStyle for Tigris compatibility.
 // https://docs.railway.com/storage-buckets
 
 function makeClient(): S3Client {
-  const endpoint = process.env.ENDPOINT;
-  const accessKeyId = process.env.ACCESS_KEY_ID;
-  const secretAccessKey = process.env.SECRET_ACCESS_KEY;
-  if (!endpoint || !accessKeyId || !secretAccessKey)
-    throw new Error("Railway Bucket env vars missing: ENDPOINT, ACCESS_KEY_ID, SECRET_ACCESS_KEY");
-  return new S3Client({
-    endpoint,
-    region: process.env.REGION ?? "auto",
-    credentials: { accessKeyId, secretAccessKey },
-    forcePathStyle: true,
-  });
+  if (!process.env.AWS_ENDPOINT_URL || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY)
+    throw new Error("Railway Bucket env vars missing: AWS_ENDPOINT_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY");
+  return new S3Client({ forcePathStyle: true });
 }
 
 function bucketName(): string {
-  const b = process.env.BUCKET;
-  if (!b) throw new Error("Railway Bucket env var missing: BUCKET");
+  const b = process.env.AWS_S3_BUCKET_NAME;
+  if (!b) throw new Error("Railway Bucket env var missing: AWS_S3_BUCKET_NAME");
   return b;
 }
 
 export function blobConfigured(): boolean {
-  return !!(process.env.ENDPOINT && process.env.ACCESS_KEY_ID && process.env.SECRET_ACCESS_KEY && process.env.BUCKET);
+  return !!(
+    process.env.AWS_ENDPOINT_URL &&
+    process.env.AWS_ACCESS_KEY_ID &&
+    process.env.AWS_SECRET_ACCESS_KEY &&
+    process.env.AWS_S3_BUCKET_NAME
+  );
 }
 
 export async function uploadFile(key: string, content: Buffer, mimeType: string): Promise<void> {

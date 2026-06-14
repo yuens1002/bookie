@@ -76,7 +76,7 @@ We use **Neon branches** to separate environments while keeping one schema: the 
 
 ## Blob storage (Railway Bucket)
 
-Receipt files (JPEG, PNG, WEBP, HEIC, PDF) are stored in a Railway-managed S3-compatible bucket (backed by Tigris). The server uses `@aws-sdk/client-s3` with Railway's injected credentials (`ENDPOINT`, `BUCKET`, `ACCESS_KEY_ID`, `SECRET_ACCESS_KEY`, `REGION`). Files are private; access is via presigned GET URLs (1-hour TTL). Logic lives in `src/domain/blob.ts`. The feature degrades gracefully — if bucket vars are absent, structured receipt data still saves; only `fileContent` upload is blocked.
+Receipt files (JPEG, PNG, WEBP, HEIC, PDF) are stored in a Railway-managed S3-compatible bucket (backed by Tigris). The server uses `@aws-sdk/client-s3` with Railway's injected credentials (`AWS_ENDPOINT_URL`, `AWS_S3_BUCKET_NAME`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION` — AWS SDK Generic style). Files are private; access is via presigned GET URLs (1-hour TTL). Logic lives in `src/domain/blob.ts`. The feature degrades gracefully — if bucket vars are absent, structured receipt data still saves; only `fileContent` upload is blocked.
 
 ## Docs stay in sync
 
