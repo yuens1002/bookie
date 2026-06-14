@@ -217,9 +217,19 @@ export function registerImportTools(server: McpServer): void {
               propertyId: mapping.propertyId ?? null,
               postings: {
                 create: [
-                  // Payment leg = signed amount (+ in / − out); category leg balances it.
-                  { id: newId("po"), accountId: args.paymentAccountId, amount: row.amountMinor },
-                  { id: newId("po"), accountId: mapping.targetAccountId, amount: -row.amountMinor },
+                  // Asset accounts: + in / − out. Liability accounts (CC/card) flip so
+                  // a positive CSV charge credits the card (liability ↑) and debits the
+                  // expense; a negative credit/refund does the reverse.
+                  {
+                    id: newId("po"),
+                    accountId: args.paymentAccountId,
+                    amount: paymentAccount.type === "liability" ? -row.amountMinor : row.amountMinor,
+                  },
+                  {
+                    id: newId("po"),
+                    accountId: mapping.targetAccountId,
+                    amount: paymentAccount.type === "liability" ? row.amountMinor : -row.amountMinor,
+                  },
                 ],
               },
             },
