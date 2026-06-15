@@ -90,6 +90,14 @@ export function registerImportTools(server: McpServer): void {
       }
       if (rows.length === 0) return fail("No data rows found in the CSV.");
 
+      // signed-amount CC statements present charges as positive (raw bank sign).
+      // debit-credit already normalizes charges to negative, so no flip is needed there.
+      const profileSpec = PROFILES[args.profile]!;
+      const needsSignFlip =
+        paymentAccount.type === "liability" &&
+        profileSpec.amount.kind === "signed" &&
+        profileSpec.amount.outflow === "negative";
+
       const externalIds = assignExternalIds(args.paymentAccountId, rows);
 
       if (args.mode === "preview") {
@@ -100,8 +108,9 @@ export function registerImportTools(server: McpServer): void {
         const existingExternalIds = new Set(existing.map((e) => e.externalId as string));
 
         // Only postings that could match: same amount as some row, within the
-        // date window around the file's span. Avoids scanning the whole account.
-        const amounts = [...new Set(rows.map((r) => r.amountMinor))];
+        // date window around the file's span. Use the effective payment-leg amount
+        // (negated for signed-amount liability accounts) so CC possible-match works.
+        const amounts = [...new Set(rows.map((r) => (needsSignFlip ? -r.amountMinor : r.amountMinor)))];
         const sortedDates = rows.map((r) => r.date).sort();
         const lo = shiftIso(sortedDates[0]!, -windowDays);
         const hi = shiftIso(sortedDates[sortedDates.length - 1]!, windowDays);
@@ -120,7 +129,8 @@ export function registerImportTools(server: McpServer): void {
           description: p.entry.description,
         }));
 
-        const planned = classifyRows({ rows, externalIds, existingExternalIds, existingPostings, windowDays });
+        const paymentAmountFn = needsSignFlip ? (r: { amountMinor: number }) => -r.amountMinor : undefined;
+        const planned = classifyRows({ rows, externalIds, existingExternalIds, existingPostings, windowDays, paymentAmountFn });
         const ruleSpecs = await loadRuleSpecs();
         const summary = {
           total: planned.length,
@@ -217,18 +227,18 @@ export function registerImportTools(server: McpServer): void {
               propertyId: mapping.propertyId ?? null,
               postings: {
                 create: [
-                  // Asset accounts: + in / − out. Liability accounts (CC/card) flip so
-                  // a positive CSV charge credits the card (liability ↑) and debits the
-                  // expense; a negative credit/refund does the reverse.
+                  // signed-amount CC statements: positive CSV = charge (liability ↑), so
+                  // flip both legs. debit-credit already normalizes charges to negative,
+                  // so no flip is needed for that profile.
                   {
                     id: newId("po"),
                     accountId: args.paymentAccountId,
-                    amount: paymentAccount.type === "liability" ? -row.amountMinor : row.amountMinor,
+                    amount: needsSignFlip ? -row.amountMinor : row.amountMinor,
                   },
                   {
                     id: newId("po"),
                     accountId: mapping.targetAccountId,
-                    amount: paymentAccount.type === "liability" ? row.amountMinor : -row.amountMinor,
+                    amount: needsSignFlip ? row.amountMinor : -row.amountMinor,
                   },
                 ],
               },

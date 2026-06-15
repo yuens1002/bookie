@@ -17,9 +17,9 @@ describe("parseCsv — signed-amount profile", () => {
   });
 
   // CC statements: positive = charge (liability ↑), negative = credit/refund (liability ↓).
-  // The POSTING SIGN FLIP for liability accounts lives in src/tools/import.ts (commit phase).
-  // These tests confirm the parser itself preserves the raw statement sign — the flip is
-  // intentionally applied downstream so the caller controls which direction is "in".
+  // The POSTING SIGN FLIP for liability accounts (signed-amount profile only) lives in
+  // src/tools/import.ts (commit phase). For signed-amount the parser preserves the raw
+  // statement sign; debit-credit and categorized profiles normalize independently.
   const CSV_CC = `Date,Description,Amount
 01/08/2026,AMAZON MKTPL*F21VQ2873,110.54
 01/05/2026,AMAZON MKTPLACE PMTS,-5.61
