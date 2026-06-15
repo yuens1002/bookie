@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { blobConfigured } from "../src/domain/blob.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
@@ -144,16 +145,9 @@ describe("manage_receipts — attach", () => {
     expect(block0.type === "text" && block0.text).toMatch(/mimeType.*required/i);
   });
 
-  it("fails when mimeType is provided without fileContent", async () => {
-    const entryId = await createEntry("2026-09-04", "Validation Test B");
-    const res = (await client.callTool({
-      name: "manage_receipts",
-      arguments: { action: "attach", entryId, mimeType: "image/jpeg" },
-    })) as CallToolResult;
-    expect(res.isError).toBe(true);
-    const block0 = res.content[0]!;
-    expect(block0.type === "text" && block0.text).toMatch(/fileContent.*required/i);
-  });
+  // mimeType without fileContent is now valid (presigned PUT path).
+  // When the bucket is not configured it fails with "not configured", not a validation error.
+  // The explicit bucket-not-configured test is in the "attach presigned PUT" describe block below.
 
   it("fails when fileContent is provided but bucket is not configured", async () => {
     // Explicitly clear bucket env vars so this test is deterministic regardless of local/CI environment.
@@ -396,4 +390,83 @@ describe("manage_receipts — get_url", () => {
     const block0 = res.content[0]!;
     expect(block0.type === "text" && block0.text).toMatch(/No receipt/);
   });
+});
+
+// ---------------------------------------------------------------------------
+// attach — presigned PUT path (mimeType only, no fileContent)
+// ---------------------------------------------------------------------------
+
+describe("manage_receipts — attach presigned PUT", () => {
+  it("fails when mimeType is provided but bucket is not configured", async () => {
+    const saved = {
+      AWS_ENDPOINT_URL: process.env.AWS_ENDPOINT_URL,
+      AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
+      AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
+      AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME,
+    };
+    delete process.env.AWS_ENDPOINT_URL;
+    delete process.env.AWS_ACCESS_KEY_ID;
+    delete process.env.AWS_SECRET_ACCESS_KEY;
+    delete process.env.AWS_S3_BUCKET_NAME;
+    try {
+      const entryId = await createEntry("2026-10-01", "Presigned Not Configured");
+      const res = (await client.callTool({
+        name: "manage_receipts",
+        arguments: { action: "attach", entryId, mimeType: "image/jpeg" },
+      })) as CallToolResult;
+      expect(res.isError).toBe(true);
+      const block0 = res.content[0]!;
+      expect(block0.type === "text" && block0.text).toMatch(/not configured/i);
+    } finally {
+      if (saved.AWS_ENDPOINT_URL !== undefined) process.env.AWS_ENDPOINT_URL = saved.AWS_ENDPOINT_URL;
+      if (saved.AWS_ACCESS_KEY_ID !== undefined) process.env.AWS_ACCESS_KEY_ID = saved.AWS_ACCESS_KEY_ID;
+      if (saved.AWS_SECRET_ACCESS_KEY !== undefined) process.env.AWS_SECRET_ACCESS_KEY = saved.AWS_SECRET_ACCESS_KEY;
+      if (saved.AWS_S3_BUCKET_NAME !== undefined) process.env.AWS_S3_BUCKET_NAME = saved.AWS_S3_BUCKET_NAME;
+    }
+  });
+
+  it.skipIf(!blobConfigured())(
+    "returns uploadUrl, fileKey, hasFile:false when bucket is configured",
+    async () => {
+      const entryId = await createEntry("2026-10-02", "Mobile Upload Test");
+      const res = parse(
+        (await client.callTool({
+          name: "manage_receipts",
+          arguments: { action: "attach", entryId, merchant: "Mobile Camera", date: "2026-10-02", mimeType: "image/jpeg" },
+        })) as CallToolResult,
+      );
+      expect(res.receiptId).toMatch(/^rec_/);
+      expect(res.uploadUrl).toMatch(/^https?:\/\//);
+      expect(res.fileKey).toBe(`receipts/${res.receiptId}`);
+      expect(res.hasFile).toBe(false);
+      expect(res.mimeType).toBe("image/jpeg");
+      expect(res.expiresIn).toBe("15 minutes");
+      createdReceiptIds.push(res.receiptId as string);
+    },
+  );
+
+  it.skipIf(!blobConfigured())(
+    "get_url succeeds for a receipt created via presigned PUT (fileKey is reserved in DB)",
+    async () => {
+      const entryId = await createEntry("2026-10-03", "Get URL After Presign");
+      const attached = parse(
+        (await client.callTool({
+          name: "manage_receipts",
+          arguments: { action: "attach", entryId, mimeType: "image/png" },
+        })) as CallToolResult,
+      );
+      createdReceiptIds.push(attached.receiptId as string);
+
+      // fileKey is reserved in DB even before the client PUTs the file,
+      // so get_url can generate a download URL immediately.
+      const urlRes = parse(
+        (await client.callTool({
+          name: "manage_receipts",
+          arguments: { action: "get_url", receiptId: attached.receiptId },
+        })) as CallToolResult,
+      );
+      expect(urlRes.fileUrl).toMatch(/^https?:\/\//);
+      expect(urlRes.mimeType).toBe("image/png");
+    },
+  );
 });
