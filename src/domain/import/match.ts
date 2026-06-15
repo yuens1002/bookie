@@ -72,8 +72,9 @@ function daysBetween(a: string, b: string): number {
 /**
  * Classify each row as create / duplicate / possible-match. Pure: callers supply
  * the set of already-present external ids and the payment account's existing
- * postings. A row's payment-leg posting equals its `amountMinor`, so a match is
- * an existing posting with the same amount within `windowDays`.
+ * postings. `paymentAmountFn` maps a row to the amount stored on the payment
+ * posting (defaults to `r.amountMinor`; callers that flip signs for liability
+ * accounts must pass the negated fn so possible-match queries align).
  */
 export function classifyRows(params: {
   rows: NormalizedRow[];
@@ -81,8 +82,10 @@ export function classifyRows(params: {
   existingExternalIds: Set<string>;
   existingPostings: ExistingPosting[];
   windowDays: number;
+  paymentAmountFn?: (row: NormalizedRow) => number;
 }): PlannedRow[] {
-  const { rows, externalIds, existingExternalIds, existingPostings, windowDays } = params;
+  const { rows, externalIds, existingExternalIds, existingPostings, windowDays, paymentAmountFn } = params;
+  const paymentAmount = paymentAmountFn ?? ((r: NormalizedRow) => r.amountMinor);
 
   return rows.map((row, i) => {
     const externalId = externalIds[i] as string;
@@ -92,7 +95,7 @@ export function classifyRows(params: {
     }
 
     const candidates = existingPostings
-      .filter((p) => p.amount === row.amountMinor && daysBetween(p.date, row.date) <= windowDays)
+      .filter((p) => p.amount === paymentAmount(row) && daysBetween(p.date, row.date) <= windowDays)
       .map((p) => ({ entryId: p.entryId, date: p.date, description: p.description }));
 
     if (candidates.length > 0) {
