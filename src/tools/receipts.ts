@@ -21,7 +21,7 @@ export function registerReceiptTools(server: McpServer): void {
     {
       title: "Manage receipts",
       description:
-        "Attach, list, delete, or retrieve a download URL for receipt data linked to a journal entry. The client LLM extracts merchant, date, total, and line items from a receipt image or text; pass the extracted fields here to store them against an existing entry. Two file-attach modes: (1) inline — pass fileContent (base64) + mimeType to upload bytes through the MCP channel; (2) presigned PUT — pass mimeType only (no fileContent) to get a presigned HTTPS upload URL valid for 15 minutes; the client then PUTs the file directly to storage with `curl -T receipt.jpg \"<uploadUrl>\"`. Mode 2 works from any client regardless of base64 capacity. One entry can have multiple receipts.",
+        "Attach, list, delete, or retrieve a download URL for receipt data linked to a journal entry. The client LLM extracts merchant, date, total, and line items from a receipt image or text; pass the extracted fields here to store them against an existing entry. Two file-attach modes: (1) inline — pass fileContent (base64) + mimeType to upload bytes through the MCP channel; (2) presigned PUT — pass mimeType only (no fileContent) to get a presigned HTTPS upload URL valid for 15 minutes; the client then PUTs the file directly to storage with `curl -T receipt.jpg -H \"Content-Type: <mimeType>\" \"<uploadUrl>\"`. The Content-Type header is required — the URL is signed with ContentType and the request will fail without a matching header. Mode 2 works from any client regardless of base64 capacity. One entry can have multiple receipts.",
       inputSchema: {
         action: z
           .enum(["attach", "list", "delete", "get_url"])
@@ -105,7 +105,6 @@ export function registerReceiptTools(server: McpServer): void {
         // Presigned PUT path: mimeType provided but no fileContent.
         // Creates the receipt row with fileKey reserved so get_url works once the client PUTs the file.
         if (!args.fileContent && args.mimeType) {
-          const id = newId("rec");
           const fileKey = `receipts/${id}`;
           const uploadUrl = await getSignedUploadUrl(fileKey, args.mimeType);
           await prisma.receipt.create({

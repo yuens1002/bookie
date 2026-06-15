@@ -102,9 +102,10 @@ Constrained LLM clients — web sessions, mobile apps — cannot reliably emit l
    ```
 2. Upload the file directly from your device to the returned URL — no server round-trip, no base64:
    ```bash
-   curl -T receipt.jpg "<uploadUrl>"
+   curl -T receipt.jpg -H "Content-Type: image/jpeg" "<uploadUrl>"
    ```
-   Or from an iOS/Android shortcut, use an HTTP PUT request to `uploadUrl` with the file body.
+   > **Important:** the `Content-Type` header must match the `mimeType` you passed in step 1. The URL is SigV4-signed with `ContentType`, so a mismatched or missing header causes `SignatureDoesNotMatch`.
+   Or from an iOS/Android shortcut, use an HTTP PUT request to `uploadUrl` with the file body and the matching `Content-Type` header.
 3. Call `manage_receipts action='get_url'` with the `receiptId` to retrieve a signed download URL whenever needed.
 
 The presigned URL is valid for 15 minutes. The receipt row is created immediately in step 1, so the structured data (merchant, date, total, line items) is always saved even if the upload is delayed or skipped.
