@@ -7,6 +7,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `manage_receipts action='attach'` now supports a presigned PUT upload path: pass `mimeType` without `fileContent` to get `{ receiptId, fileKey, uploadUrl, expiresIn }` — the client uploads bytes directly to storage via `curl -T receipt.jpg -H "Content-Type: <mimeType>" "<uploadUrl>"` (Content-Type header required — URL is signed with ContentType). Works from any client regardless of base64 capacity (Claude.ai web, ChatGPT mobile, etc.). The existing inline `fileContent` path is unchanged.
+- `src/domain/blob.ts` — `getSignedUploadUrl(key, mimeType, ttlSecs?)` helper (symmetric with `getSignedDownloadUrl`).
+- `docs/DEPLOYING.md` — "Uploading receipt files from a mobile device" section with step-by-step presigned PUT flow.
 
 ### Changed
 

@@ -80,7 +80,7 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
 
 ## Railway Bucket setup (for receipt file storage)
 
-Receipt file storage (`manage_receipts` with `fileContent`) uses Railway's built-in S3-compatible object storage.
+Receipt file storage (`manage_receipts action='attach'`) uses Railway's built-in S3-compatible object storage.
 
 1. In your Railway project, click **New** → **Storage Bucket**.
 2. Give it a name (e.g. `bookie-receipts`) and click **Create**.
@@ -90,7 +90,25 @@ Receipt file storage (`manage_receipts` with `fileContent`) uses Railway's built
    > If the Service dropdown is empty, the bucket and bookie service are in different Railway environments — move or recreate the bucket inside the same environment.
 4. Redeploy the service — file upload and signed URL retrieval will be available automatically.
 
-> **Without a bucket:** structured receipt data (merchant, date, total, line items) is always stored; only the raw file upload feature is gated on the bucket being configured. The tool returns a clear error if `fileContent` is provided but the bucket vars are absent.
+> **Without a bucket:** structured receipt data (merchant, date, total, line items) is always stored; only the raw file upload feature is gated on the bucket being configured. The tool returns a clear error if `mimeType` is provided but the bucket vars are absent.
+
+### Uploading receipt files from a mobile device (Claude.ai / ChatGPT)
+
+Constrained LLM clients — web sessions, mobile apps — cannot reliably emit large base64 payloads through the MCP tool channel. Use the presigned PUT flow instead:
+
+1. Call `manage_receipts action='attach'` with **`mimeType`** (e.g. `"image/jpeg"`) and **no `fileContent`**. The server reserves a storage key and returns:
+   ```json
+   { "receiptId": "rec_...", "fileKey": "receipts/rec_...", "uploadUrl": "https://...", "expiresIn": "15 minutes" }
+   ```
+2. Upload the file directly from your device to the returned URL — no server round-trip, no base64:
+   ```bash
+   curl -T receipt.jpg -H "Content-Type: image/jpeg" "<uploadUrl>"
+   ```
+   > **Important:** the `Content-Type` header must match the `mimeType` you passed in step 1. The URL is SigV4-signed with `ContentType`, so a mismatched or missing header causes `SignatureDoesNotMatch`.
+   Or from an iOS/Android shortcut, use an HTTP PUT request to `uploadUrl` with the file body and the matching `Content-Type` header.
+3. Call `manage_receipts action='get_url'` with the `receiptId` to retrieve a signed download URL whenever needed.
+
+The presigned URL is valid for 15 minutes. The receipt row is created immediately in step 1, so the structured data (merchant, date, total, line items) is always saved even if the upload is delayed or skipped.
 
 ## Resend setup (for `send_report`)
 
