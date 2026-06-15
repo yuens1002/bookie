@@ -15,7 +15,7 @@ function makeClient(): S3Client {
     throw new Error("Railway Bucket env vars missing: AWS_ENDPOINT_URL, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY");
   return new S3Client({
     forcePathStyle: true,
-    region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? "auto",
+    region: process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "auto",
   });
 }
 
