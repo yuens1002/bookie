@@ -46,14 +46,6 @@ export async function getSignedDownloadUrl(key: string, ttlSecs = 3600): Promise
   });
 }
 
-export async function getSignedUploadUrl(key: string, mimeType: string, ttlSecs = 900): Promise<string> {
-  return getSignedUrl(
-    makeClient(),
-    new PutObjectCommand({ Bucket: bucketName(), Key: key, ContentType: mimeType }),
-    { expiresIn: ttlSecs },
-  );
-}
-
 export async function deleteFile(key: string): Promise<void> {
   await makeClient().send(new DeleteObjectCommand({ Bucket: bucketName(), Key: key }));
 }

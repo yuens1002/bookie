@@ -6,12 +6,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Added
-- `manage_receipts action='attach'` now supports a presigned PUT upload path: pass `mimeType` without `fileContent` to get `{ receiptId, fileKey, uploadUrl, expiresIn }` — the client uploads bytes directly to storage via `curl -T receipt.jpg -H "Content-Type: <mimeType>" "<uploadUrl>"` (Content-Type header required — URL is signed with ContentType). Works from any client regardless of base64 capacity (Claude.ai web, ChatGPT mobile, etc.). The existing inline `fileContent` path is unchanged.
-- `src/domain/blob.ts` — `getSignedUploadUrl(key, mimeType, ttlSecs?)` helper (symmetric with `getSignedDownloadUrl`).
-- `docs/DEPLOYING.md` — "Uploading receipt files from a mobile device" section with step-by-step presigned PUT flow.
-
 ### Changed
+- `manage_receipts action='attach'`: removed presigned PUT upload path (`mimeType`-only without `fileContent`). Claude.ai's sandboxed runtime prevents LLM clients from making arbitrary outbound HTTP requests to signed S3 URLs, so the feature was not usable in practice from any LLM client. The inline `fileContent` + `mimeType` path is unchanged. Claude.ai mobile and web clients should call `attach` with structured fields only (no `fileContent`) — vision extracts the data in-conversation; raw bytes cannot flow through the MCP tool channel in that environment.
+- `docs/DEPLOYING.md` — Railway Bucket note now clarifies the correct Claude.ai mobile workflow (structured fields only); removed the presigned PUT step-by-step section.
 
 ### Fixed
 - `import_transactions`: CC/card (liability) accounts now produce correct double-entry postings — a positive CSV charge credits the card and debits the expense; a negative credit/refund debits the card and credits the expense. Previously the signs were inverted, causing CC expenses to appear as negative amounts in reports.
