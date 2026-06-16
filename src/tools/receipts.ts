@@ -5,7 +5,7 @@ import { newId } from "../lib/id.js";
 import { toMinor, formatMoney } from "../lib/money.js";
 import { ok, fail } from "../lib/result.js";
 import { isPrismaCode } from "../lib/prisma.js";
-import { blobConfigured, uploadFile, getSignedDownloadUrl, getSignedUploadUrl, deleteFile } from "../domain/blob.js";
+import { blobConfigured, uploadFile, getSignedDownloadUrl, deleteFile } from "../domain/blob.js";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -21,7 +21,7 @@ export function registerReceiptTools(server: McpServer): void {
     {
       title: "Manage receipts",
       description:
-        "Attach, list, delete, or retrieve a download URL for receipt data linked to a journal entry. The client LLM extracts merchant, date, total, and line items from a receipt image or text; pass the extracted fields here to store them against an existing entry. Two file-attach modes: (1) inline — pass fileContent (base64) + mimeType to upload bytes through the MCP channel; (2) presigned PUT — pass mimeType only (no fileContent) to get a presigned HTTPS upload URL valid for 15 minutes; the client then PUTs the file directly to storage with `curl -T receipt.jpg -H \"Content-Type: <mimeType>\" \"<uploadUrl>\"`. The Content-Type header is required — the URL is signed with ContentType and the request will fail without a matching header. Mode 2 works from any client regardless of base64 capacity. One entry can have multiple receipts.",
+        "Attach, list, delete, or retrieve a download URL for receipt data linked to a journal entry. The client LLM extracts merchant, date, total, and line items from a receipt image or text; pass those extracted fields here to store them against an existing entry. Structured data (merchant, date, total, line items) is always stored — no bucket required. File attachment is optional: if the raw file bytes are accessible (e.g. Claude Desktop reading a local file), pass fileContent (base64-encoded, JPEG/PNG/WEBP/HEIC/PDF, practical limit ~500 KB before encoding) + mimeType to upload the file to object storage and receive a signed 1-hour download URL. Both fields are required together; either alone is an error. File storage requires Railway Bucket env vars. Claude.ai mobile clients use vision to extract fields from the receipt image in conversation — in that workflow, call attach with structured fields only and no fileContent. One entry can have multiple receipts.",
       inputSchema: {
         action: z
           .enum(["attach", "list", "delete", "get_url"])
@@ -50,13 +50,13 @@ export function registerReceiptTools(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "(attach) Base64-encoded receipt file (JPEG, PNG, WEBP, HEIC, or PDF). Requires Railway Bucket to be configured.",
+            "(attach) Base64-encoded receipt file (JPEG, PNG, WEBP, HEIC, or PDF). Must be paired with mimeType. Requires Railway Bucket env vars. Only pass when you have direct access to the file bytes (e.g. Claude Desktop reading a local file). Omit to store structured data only (always valid, no bucket required).",
           ),
         mimeType: z
           .enum(["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"])
           .optional()
           .describe(
-            "(attach) MIME type of the file. With fileContent: required (inline upload). Without fileContent: triggers presigned PUT — server returns uploadUrl for direct client upload.",
+            "(attach) MIME type of the file. Required when fileContent is provided; must not be provided without fileContent.",
           ),
         // list fields
         startDate: z
@@ -78,7 +78,8 @@ export function registerReceiptTools(server: McpServer): void {
       if (args.action === "attach") {
         if (!args.entryId) return fail("`entryId` is required for action='attach'.");
         if (args.fileContent && !args.mimeType) return fail("`mimeType` is required when `fileContent` is provided.");
-        if ((args.fileContent || args.mimeType) && !blobConfigured())
+        if (!args.fileContent && args.mimeType) return fail("`fileContent` is required when `mimeType` is provided.");
+        if (args.fileContent && !blobConfigured())
           return fail("Receipt file storage is not configured. Add the Railway Bucket to this service.");
 
         const entry = await prisma.journalEntry.findUnique({
@@ -101,41 +102,6 @@ export function registerReceiptTools(server: McpServer): void {
               })),
             )
           : null;
-
-        // Presigned PUT path: mimeType provided but no fileContent.
-        // Creates the receipt row with fileKey reserved so get_url works once the client PUTs the file.
-        if (!args.fileContent && args.mimeType) {
-          const fileKey = `receipts/${id}`;
-          const uploadUrl = await getSignedUploadUrl(fileKey, args.mimeType);
-          await prisma.receipt.create({
-            data: {
-              id,
-              entryId: args.entryId,
-              merchant: args.merchant ?? null,
-              date: args.date ?? null,
-              total: totalMinor,
-              lineItems: lineItemsJson,
-              fileKey,
-              mimeType: args.mimeType,
-            },
-          });
-          return ok({
-            receiptId: id,
-            entryId: args.entryId,
-            entryDate: entry.date,
-            entryDescription: entry.description,
-            merchant: args.merchant ?? null,
-            date: args.date ?? null,
-            total: totalMinor !== null ? formatMoney(totalMinor) : null,
-            totalMinor,
-            lineItemCount: args.lineItems?.length ?? 0,
-            hasFile: false,
-            mimeType: args.mimeType,
-            fileKey,
-            uploadUrl,
-            expiresIn: "15 minutes",
-          });
-        }
 
         let fileKey: string | null = null;
         let fileUrl: string | null = null;
