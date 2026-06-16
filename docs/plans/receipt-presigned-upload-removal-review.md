@@ -6,7 +6,7 @@
 
 ## Verdict
 
-Clear — all deliverables landed, tests cover every validation invariant, no live-doc drift. One minor finding: two stale plan docs describe the removed feature and should be deleted before committing.
+Clear — all deliverables landed, tests cover every validation invariant, no live-doc drift. One minor finding acted on: two stale plan docs describing the removed feature were deleted before committing (they were never tracked in git, so no deletion commit is needed).
 
 ## Deliverables ↔ Code
 
@@ -44,19 +44,13 @@ None.
 - `docs/ARCHITECTURE.md:79` — mentions "presigned GET URLs (1-hour TTL)" and "if bucket vars are absent, structured receipt data still saves; only `fileContent` upload is blocked." Both claims remain accurate after the removal. No change needed. ✓
 - `README.md` — no presigned PUT references. ✓
 
-## Minor finding: stale plan docs should be deleted
+## Minor finding: stale plan docs (already cleaned up)
 
-`docs/plans/receipt-presigned-upload-plan.md` and `docs/plans/receipt-presigned-upload-ACs.md` describe the presigned PUT feature that was implemented and then removed without ever being released. Both files:
-- Reference code that no longer exists (`getSignedUploadUrl`)
-- Contain ACs that are now false (e.g. "DEPLOYING.md has mobile upload section", "`mimeType` only returns upload URL")
-- The feature never shipped in a version tag — there is no historical value in keeping them
-
-**Action before commit:** delete both files.
+`docs/plans/receipt-presigned-upload-plan.md` and `docs/plans/receipt-presigned-upload-ACs.md` described the presigned PUT feature that was implemented and then removed without ever being released. Both files referenced code that no longer exists (`getSignedUploadUrl`) and contained ACs that were false after removal (e.g. "DEPLOYING.md has mobile upload section"). Both were deleted before this commit; they were never tracked in git so no explicit deletion commit was needed.
 
 ## Recommendations
 
-1. Delete `docs/plans/receipt-presigned-upload-plan.md` and `docs/plans/receipt-presigned-upload-ACs.md` — stale docs for a feature that was never released. Leaving them risks a future reader confusing the plan as describing live behavior.
-2. (No other issues — proceed to `/commit`.)
+1. (No open items — the plan doc cleanup was completed before commit. Proceed to merge.)
 
 ## Inputs for /retro
 
