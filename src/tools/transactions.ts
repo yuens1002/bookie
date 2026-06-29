@@ -20,7 +20,7 @@ export function registerTransactionTools(server: McpServer): void {
       inputSchema: {
         date: z.string().regex(ISO_DATE, "Use ISO date YYYY-MM-DD"),
         description: z.string().min(1),
-        amount: z.number().positive().describe("Positive amount in dollars"),
+        amount: z.number().positive().describe("Positive amount in dollars — NOT cents (e.g. 3159.47 for a $3,159.47 payment)"),
         fromAccountId: z
           .string()
           .describe("Source account (credited / decreased) — e.g. your checking for an expense"),

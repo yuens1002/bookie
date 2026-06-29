@@ -45,7 +45,7 @@ export function registerImportTools(server: McpServer): void {
               .map((p) => `'${p.name}' (${p.description})`)
               .join(" | ")}`,
           ),
-        csv: z.string().min(1).describe("Raw CSV text of the statement (including the header row)."),
+        csv: z.string().min(1).describe("Raw CSV text of the statement (paste the full file contents including the header row — NOT a file path)."),
         paymentAccountId: z
           .string()
           .describe("The bank/card account this statement belongs to — the leg every row's payment posts to. Use manage_accounts → list."),
@@ -59,7 +59,7 @@ export function registerImportTools(server: McpServer): void {
         mappings: z
           .array(
             z.object({
-              index: z.number().int().min(0).describe("0-based row index from the preview"),
+              index: z.number().int().min(0).describe("0-based row number from the preview — identifies exactly which row this mapping applies to. Not a priority or pattern weight; each row needs its own entry."),
               targetAccountId: z.string().describe("Category account for this row (expense for spend, income for a deposit)"),
               propertyId: z.string().optional().describe("Rental property (Schedule E). Use manage_properties → list."),
               skip: z.boolean().optional().describe("Explicitly skip this row"),
