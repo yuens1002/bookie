@@ -9,8 +9,6 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 - `import_transactions`: clarified `csv` param description ("NOT a file path"); strengthened `mappings[].index` description ("Not a priority or pattern weight; each row needs its own entry").
 - `add_transaction`: clarified `amount` description ("NOT cents — e.g. 3159.47 for a $3,159.47 payment").
-
-### Changed
 - `manage_receipts action='attach'`: removed presigned PUT upload path (`mimeType`-only without `fileContent`). Claude.ai's sandboxed runtime prevents LLM clients from making arbitrary outbound HTTP requests to signed S3 URLs, so the feature was not usable in practice from any LLM client. The inline `fileContent` + `mimeType` path is unchanged. Claude.ai mobile and web clients should call `attach` with structured fields only (no `fileContent`) — vision extracts the data in-conversation; raw bytes cannot flow through the MCP tool channel in that environment.
 - `docs/DEPLOYING.md` — Railway Bucket note now clarifies the correct Claude.ai mobile workflow (structured fields only); removed the presigned PUT step-by-step section.
 
