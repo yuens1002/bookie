@@ -134,6 +134,7 @@ See [`.env.example`](.env.example) for the full reference. Key variables:
 | `OAUTH_CLIENT_ID` | OAuth client ID (default: `claude-ai-connector`) |
 | `OAUTH_CLIENT_SECRET` | Single-owner gate: `/token` requires a matching `client_secret` |
 | `RESEND_API_KEY` | Resend API key for `send_report` |
+| `RESEND_FROM` | Verified sender address for `send_report` (e.g. `Bookie <reports@yourdomain.com>`) |
 | `AWS_ENDPOINT_URL` / `AWS_S3_BUCKET_NAME` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_DEFAULT_REGION` | Railway Bucket credentials — auto-injected when you connect a bucket to the service (use AWS SDK Generic style); enables receipt file upload in `manage_receipts` |
 
 ## Docs
