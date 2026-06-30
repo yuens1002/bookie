@@ -59,7 +59,7 @@
 ## Commit schedule
 
 1. `feat(p4): add rate limiting, audit logging, send_report tool, and deploy guide`
-2. PR → Copilot review → merge → `docs/CHANGELOG.md [Unreleased]` entry
+2. PR → Copilot review → merge → `CHANGELOG.md [Unreleased]` entry
 
 ---
 
@@ -68,6 +68,6 @@
 - `npm run docs:tools` → regenerate `docs/TOOLS.md` (15 → 16 tools)
 - README tool table — add `send_report` row
 - `docs/ROADMAP.md` — mark P4 items ✅
-- `docs/CHANGELOG.md` — `[Unreleased]` entry
+- `CHANGELOG.md` — `[Unreleased]` entry
 
 Release: after PR merges, run `/release minor` → v0.5.0.

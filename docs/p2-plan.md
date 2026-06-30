@@ -41,7 +41,7 @@
 
 ### Commit schedule
 1. `feat(reconcile): add cleared/statementRef to Posting + reconcile tool`
-2. PR → Copilot review → merge → `docs/CHANGELOG.md [Unreleased]` entry
+2. PR → Copilot review → merge → `CHANGELOG.md [Unreleased]` entry
 
 ---
 
@@ -72,7 +72,7 @@
 
 ### Commit schedule
 1. `feat(receipts): add manage_receipts tool and generate_report monthly-reconciliation mode`
-2. PR → Copilot review → merge → `docs/CHANGELOG.md [Unreleased]` entry
+2. PR → Copilot review → merge → `CHANGELOG.md [Unreleased]` entry
 
 ---
 
@@ -82,6 +82,6 @@ Each PR includes:
 - `npm run docs:tools` → regenerate `docs/TOOLS.md`
 - README tool table — add new tool rows
 - `docs/ROADMAP.md` — mark shipped items ✅
-- `docs/CHANGELOG.md` — `[Unreleased]` entry
+- `CHANGELOG.md` — `[Unreleased]` entry
 
 Release: after both PRs merge, run `/release minor` → v0.3.0.

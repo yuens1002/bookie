@@ -55,7 +55,7 @@
 ## Commit schedule
 
 1. `feat(tax): add Schedule C/E report modes and export_report tool`
-2. PR → Copilot review → merge → `docs/CHANGELOG.md [Unreleased]` entry
+2. PR → Copilot review → merge → `CHANGELOG.md [Unreleased]` entry
 
 ---
 
@@ -63,6 +63,6 @@
 
 - `npm run docs:tools` → regenerate `docs/TOOLS.md`
 - `docs/ROADMAP.md` — mark P3 items ✅
-- `docs/CHANGELOG.md` — `[Unreleased]` entry
+- `CHANGELOG.md` — `[Unreleased]` entry
 
 Release: after PR merges, run `/release minor` → v0.4.0.

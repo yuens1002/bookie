@@ -23,7 +23,7 @@ Clear — all deliverables landed, tests cover every validation invariant, no li
 | Restore "fails when mimeType provided without fileContent" | `test/receipts.test.ts:147-156` | ✓ shipped |
 | Remove presigned PUT describe block | `test/receipts.test.ts:398-472` deleted | ✓ shipped |
 | Update `docs/DEPLOYING.md` — remove mobile upload section | lines 95-111 removed, bucket note updated | ✓ shipped |
-| Update `docs/CHANGELOG.md` — replace presigned PUT Added entries | `[Unreleased]` section rewritten | ✓ shipped |
+| Update `CHANGELOG.md` — replace presigned PUT Added entries | `[Unreleased]` section rewritten | ✓ shipped |
 | Regenerate `docs/TOOLS.md` | `npm run docs:tools` — 16 tools | ✓ shipped |
 | Version bump | `package.json` 0.7.1 → 0.7.2 | ✓ shipped |
 
