@@ -7,6 +7,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- Renamed npm package from `bookie` to `bookie-mcp`; set `"private": false` to enable npm publishing; updated bin key to `bookie-mcp`.
 - Moved `CHANGELOG.md` from `docs/` to repo root so profile-sync tooling can discover it without path configuration; updated all internal references.
 
 ### Changed

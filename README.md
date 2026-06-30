@@ -1,25 +1,35 @@
 # bookie
 
-> A Model Context Protocol (MCP) server that keeps the books for your **personal and business finances** using **double-entry accounting** — driven entirely from an LLM. No UI: Claude or GPT *is* the interface.
+**An MCP server that keeps books for freelancers and landlords — driven from Claude or GPT instead of Quickbooks.**
 
-Import bank-statement CSVs, categorize spending (including photographed receipts), reconcile monthly, and generate US **Schedule C** tax reports — by asking your assistant. Runs locally over stdio or remotely over HTTP so a mobile consumer LLM can reach it.
+Ask your LLM to import a bank statement, categorize spending, reconcile a month, or generate a Schedule C. Bookie provides the correct double-entry ledger underneath — so the model reasons over real numbers, not a spreadsheet it's improvising on the fly.
 
-## Why no UI?
+**This is for you if:** you're a solopreneur, freelancer, or rental property owner already living in Claude or GPT, you're comfortable with a 15-minute setup, and you want books that are actually correct.
 
-The host LLM already reads CSVs, sees receipt images, and writes prose. Bookie owns the things an LLM *shouldn't* improvise: a correct double-entry ledger, integer-cent money math, deterministic categorization rules, and reproducible reports. The model handles language and vision; the server handles the books.
+**Not for you if:** you want a dashboard UI, you need multi-user access, or you're satisfied with Quickbooks / a spreadsheet.
+
+## What you need before starting
+
+- **Node ≥ 24**
+- **A [Neon](https://neon.tech) Postgres database** (free tier is enough — this is where the ledger lives)
+- **An MCP-capable host:** Claude Desktop, Claude.ai, Cursor, VS Code, or any host supporting the MCP stdio or HTTP transport
 
 ## Quick start (local, stdio)
 
 ```bash
+# via npm (once published):
+npx bookie-mcp
+
+# or from source:
+git clone https://github.com/yuens1002/bookie
+cd bookie
 npm install                 # also runs `prisma generate`
-cp .env.example .env        # then fill in BOOKIE_DB_URL / BOOKIE_DB_DIRECT_URL (Neon)
+cp .env.example .env        # fill in BOOKIE_DB_URL / BOOKIE_DB_DIRECT_URL (Neon connection strings)
 npm run db:push             # apply schema to your Neon database
-npm run dev                 # starts on stdio; seeds the default chart on first run
+npm run build               # compile to dist/
 ```
 
-Register it with any MCP-capable environment (Claude Desktop, Cursor, VS Code, or any host that supports the MCP stdio transport). Point `BOOKIE_DB_URL` at your **one shared Neon DB** — the same value the deployed HTTP server uses — so every client shares one ledger.
-
-Example: Claude Desktop (`claude_desktop_config.json`):
+Register with your MCP host — example for Claude Desktop (`claude_desktop_config.json`):
 
 ```json
 {
@@ -36,18 +46,22 @@ Example: Claude Desktop (`claude_desktop_config.json`):
 }
 ```
 
-(Run `npm run build` first to produce `dist/index.js`, or substitute `tsx src/index.ts` for development.)
+Point all MCP clients at the **same `BOOKIE_DB_URL`** so Claude Desktop, Claude.ai (mobile), and any other host share one ledger.
 
-## Quick start (remote, HTTP — for mobile LLMs)
+## Quick start (remote, HTTP — for Claude.ai mobile)
 
 ```bash
 npm run build
 BOOKIE_TRANSPORT=http BOOKIE_API_KEY=$(openssl rand -hex 32) npm start
-# Streamable HTTP endpoint: POST http://localhost:3000/mcp  (also POST / — used by Claude.ai)
-# Health check:             GET  http://localhost:3000/health
+# MCP endpoint: POST http://localhost:3000/mcp  (also POST / — used by Claude.ai connector)
+# Health check: GET  http://localhost:3000/health
 ```
 
-Deploy to Railway with the included `Dockerfile` / `railway.json` (the start command runs `prisma db push` then boots). See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full walkthrough (Railway + Neon + Resend setup, env var reference).
+Deploy to Railway with the included `Dockerfile` / `railway.json` (the start command runs `prisma db push` then boots). See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full walkthrough (Railway + Neon + Resend setup, env var reference, Claude.ai OAuth connector).
+
+## Why no UI?
+
+The host LLM already reads CSVs, sees receipt images, and writes prose. Bookie owns the things an LLM *shouldn't* improvise: a correct double-entry ledger, integer-cent money math, deterministic categorization rules, and reproducible reports. The model handles language and vision; the server handles the books.
 
 ## Tools
 
