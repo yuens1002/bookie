@@ -110,7 +110,7 @@ See [`.env.example`](.env.example) for the full reference. Key variables:
 - [Architecture](docs/ARCHITECTURE.md) — data model, transports, layering
 - [Deploying](docs/DEPLOYING.md) — Railway + Neon + Resend setup
 - [Roadmap](docs/ROADMAP.md) — phased plan
-- [Changelog](docs/CHANGELOG.md) — what shipped
+- [Changelog](CHANGELOG.md) — what shipped
 - [Releasing](docs/RELEASING.md) — versioning + release process
 - [Tools](docs/TOOLS.md) — generated manual
 - [Contributing](CONTRIBUTING.md) — setup, conventions, tests

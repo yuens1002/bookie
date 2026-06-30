@@ -63,7 +63,7 @@ npm run typecheck && npm run build && npm test
 ## Commits & PRs
 
 - **[Conventional Commits](https://www.conventionalcommits.org/)** (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
-- Keep PRs small and focused. Update `docs/CHANGELOG.md` (Unreleased) and, if scope changes, `docs/ROADMAP.md`.
+- Keep PRs small and focused. Update `CHANGELOG.md` (Unreleased) and, if scope changes, `docs/ROADMAP.md`.
 - Describe *why*, not just *what*. If it's user-facing, note how it shows up through the LLM.
 
 ## License

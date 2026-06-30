@@ -8,14 +8,14 @@ bookie follows [Semantic Versioning](https://semver.org). Releases are **GitHub 
 - **1.0.0** — cut when the core loop is complete (P0–P3: ledger → import → categorize → reconcile → tax reports) **and** bookie has produced a real reporting cycle on actual books. After 1.0, breaking changes bump major.
 
 ## Cadence
-Release per roadmap phase, when a coherent increment has merged to `main`. The `[Unreleased]` section of [`docs/CHANGELOG.md`](CHANGELOG.md) accumulates across feature PRs; a release promotes it into a dated version section.
+Release per roadmap phase, when a coherent increment has merged to `main`. The `[Unreleased]` section of [`CHANGELOG.md`](../CHANGELOG.md) accumulates across feature PRs; a release promotes it into a dated version section.
 
 ## Process
 The maintainer runs the release locally:
-1. Bump `version` in `package.json`; promote `[Unreleased]` → `[X.Y.Z] — <date>` in `docs/CHANGELOG.md`; update the compare links.
+1. Bump `version` in `package.json`; promote `[Unreleased]` → `[X.Y.Z] — <date>` in `CHANGELOG.md`; update the compare links.
 2. Open a `chore(release): vX.Y.Z` PR and merge it.
 3. Tag the merge commit `vX.Y.Z` (annotated) and push it.
 4. `gh release create vX.Y.Z` with notes from the changelog section.
 
 ## Changelog
-`docs/CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com). Every user-facing change is logged under `[Unreleased]` in the PR that makes it, then promoted to a version on release.
+`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com). Every user-facing change is logged under `[Unreleased]` in the PR that makes it, then promoted to a version on release.
