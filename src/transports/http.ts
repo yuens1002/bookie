@@ -42,6 +42,18 @@ function checkRateLimit(ip: string): boolean {
 // --- HTTP transport ----------------------------------------------------------
 
 export async function startHttp(): Promise<void> {
+  // Require at least one auth mechanism before accepting any connections.
+  // An unauthenticated HTTP endpoint on a financial server is a data-exposure
+  // risk — refuse to start rather than silently run open.
+  const hasStaticKey = !!process.env.BOOKIE_API_KEY;
+  const hasJwtSecret = !!process.env.JWT_SECRET;
+  if (!hasStaticKey && !hasJwtSecret) {
+    throw new Error(
+      "HTTP transport requires auth: set BOOKIE_API_KEY (static bearer, for Claude Desktop) " +
+      "and/or JWT_SECRET (OAuth, for Claude.ai) in your environment variables.",
+    );
+  }
+
   const seeded = await bootstrapLedger();
 
   const app = new Hono<NodeBindings>();
@@ -78,6 +90,15 @@ export async function startHttp(): Promise<void> {
   );
 
   app.get("/authorize", (c) => {
+    // Gate: OAuth requires OAUTH_CLIENT_SECRET so only the owner can authorize.
+    // Without it, any visitor could complete the flow and access the ledger.
+    if (!process.env.OAUTH_CLIENT_SECRET) {
+      return c.json(
+        { error: "server_error", error_description: "OAUTH_CLIENT_SECRET is not configured — set it in your environment variables to enable OAuth." },
+        500,
+      );
+    }
+
     const { client_id, code_challenge, code_challenge_method, redirect_uri, response_type, state } =
       c.req.query();
 

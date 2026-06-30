@@ -7,6 +7,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- `src/lib/auth.ts`: `requireAuth()` now returns `{ ok: false }` when `BOOKIE_API_KEY` is unset rather than `{ ok: true }`, so OAuth JWT callers are correctly validated instead of being silently passed through.
+- `src/transports/http.ts`: HTTP transport now refuses to start unless at least `BOOKIE_API_KEY` or `JWT_SECRET` is configured — prevents accidentally deploying an unauthenticated financial endpoint.
+- `src/transports/http.ts`: `/authorize` now returns `500 server_error` when `OAUTH_CLIENT_SECRET` is unset — prevents any visitor from completing the OAuth flow on an unconfigured server.
+- `.env.example`: renamed `BOOKIE_REPORT_FROM` → `RESEND_FROM` to match what `send_report` actually reads; updated `OAUTH_CLIENT_SECRET` comment from "Recommended" to "Required when using OAuth".
+- `docs/DEPLOYING.md`: upgraded `OAUTH_CLIENT_SECRET` from "Recommended" to "Required for Claude.ai connector".
+- `README.md`: added missing `RESEND_FROM` row to configuration table.
 - Renamed npm package from `bookie` to `bookie-mcp`; set `"private": false` to enable npm publishing; updated bin key to `bookie-mcp`.
 - Moved `CHANGELOG.md` from `docs/` to repo root so profile-sync tooling can discover it without path configuration; updated all internal references.
 
