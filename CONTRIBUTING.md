@@ -26,6 +26,8 @@ npm run db:push              # apply the schema
 npm run dev                  # stdio transport; seeds the default chart on first run
 ```
 
+Or, if you're using Neon: `npm run setup` handles project creation, secret generation, and schema push automatically (requires `npm install -g neonctl` and a free Neon account).
+
 Run the HTTP transport instead with `npm run dev:http` (serves `POST /mcp`, `GET /health`). Explore tools interactively with the MCP Inspector:
 
 ```bash

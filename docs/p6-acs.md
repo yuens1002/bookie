@@ -21,7 +21,7 @@
 | AC-TST-1 | D5 | `/test-engineer` | `generateSecrets()` — output format invariants | Test run: `npm test` | `scripts/setup.test.ts` asserts `BOOKIE_API_KEY` and `JWT_SECRET` are 64-char hex strings (`/^[0-9a-f]{64}$/`); `OAUTH_CLIENT_SECRET` matches base64url pattern (`/^[A-Za-z0-9_-]+$/`) and length ≥ 32 | | | |
 | AC-TST-2 | D5 | `/test-engineer` | `parseConnectionUris(json)` — extracts both postgresql:// URLs from `projects create` JSON | Test run: `npm test` | `scripts/setup.test.ts` passes a fixture matching the `neonctl projects create --output json` shape and asserts both returned URLs begin with `postgresql://` and that the pooled URL host contains `-pooler` | | | |
 | AC-TST-3 | D5 | `/test-engineer` | `buildEnvContent(values, existing)` — idempotency: pre-set keys are preserved | Test run: `npm test` | `scripts/setup.test.ts` calls `buildEnvContent` with a non-empty `BOOKIE_DB_URL` in `existing` and asserts the output string retains that exact value unchanged | | | |
-| AC-TST-4 | D5 | `/test-engineer` | `checkNeonctl()` — ENOENT → throws with actionable message | Test run: `npm test` | `scripts/setup.test.ts` mocks `execSync` to throw `ENOENT` and asserts `checkNeonctl()` throws an error whose message includes the word "neonctl" | | | |
+| AC-TST-4 | D5 | `/test-engineer` | `checkNeonctl()` — ENOENT → throws with actionable message | Test run: `npm test` | `scripts/setup.test.ts` mocks `spawnSync` to return `error.code === "ENOENT"` and asserts `checkNeonctl()` throws an error whose message includes the word "neonctl" | | | |
 
 ## Regression Acceptance Criteria
 

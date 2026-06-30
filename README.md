@@ -4,7 +4,7 @@
 
 Ask your LLM to import a bank statement, categorize spending, reconcile a month, or generate a Schedule C. Bookie provides the correct double-entry ledger underneath — so the model reasons over real numbers, not a spreadsheet it's improvising on the fly.
 
-**This is for you if:** you're a solopreneur, freelancer, or rental property owner already living in Claude or GPT, you're comfortable with a 15-minute setup, and you want books that are actually correct.
+**This is for you if:** you're a solopreneur, freelancer, or rental property owner already living in Claude or GPT, you're comfortable with a 5-minute setup, and you want books that are actually correct.
 
 **Not for you if:** you want a dashboard UI, you need multi-user access, or you're satisfied with QuickBooks / a spreadsheet.
 
