@@ -132,7 +132,7 @@ See [`.env.example`](.env.example) for the full reference. Key variables:
 | `PUBLIC_URL` | Public HTTPS base URL of the deployed server (Claude.ai connector) |
 | `JWT_SECRET` | HS256 signing secret for OAuth JWT access tokens |
 | `OAUTH_CLIENT_ID` | OAuth client ID (default: `claude-ai-connector`) |
-| `OAUTH_CLIENT_SECRET` | Single-owner gate: `/token` requires a matching `client_secret` |
+| `OAUTH_CLIENT_SECRET` | Required when using OAuth: `/authorize` refuses all requests when unset (prevents any visitor from authorizing); `/token` also validates it. Enter this value in the Claude.ai connector settings. |
 | `RESEND_API_KEY` | Resend API key for `send_report` |
 | `RESEND_FROM` | Verified sender address for `send_report` (e.g. `Bookie <reports@yourdomain.com>`) |
 | `AWS_ENDPOINT_URL` / `AWS_S3_BUCKET_NAME` / `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_DEFAULT_REGION` | Railway Bucket credentials — auto-injected when you connect a bucket to the service (use AWS SDK Generic style); enables receipt file upload in `manage_receipts` |
