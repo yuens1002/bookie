@@ -28,6 +28,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "db:seed": "tsx src/db/seed.ts",
+    "setup": "tsx scripts/setup.ts",
     "docs:tools": "tsx scripts/gen-tools-doc.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
