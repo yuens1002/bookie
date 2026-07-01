@@ -14,7 +14,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [0.8.0] — 2026-07-01
 
-Minor bump, not patch — retroactively marking the npm/Railway/GHCR distribution work already shipped in `0.7.9`–`0.7.11` (below) as its own roadmap-phase increment (P6: deployment & distribution), consistent with this project's versioning policy (minor = phase increment). No new user-facing behavior beyond `0.7.11` other than the docs fix below.
+Minor bump, not patch — retroactively marking the npm/Railway/GHCR distribution work already shipped across the `0.7.x` patch series culminating in `v0.7.11` (below) as its own roadmap-phase increment (P6: deployment & distribution), consistent with this project's versioning policy (minor = phase increment). No new user-facing behavior beyond `v0.7.11` other than the docs fix below.
 
 ### Changed
 - `docs/RELEASING.md` and the `/release` skill now document that npm publish is automatic (triggered by the version-tag push, via `npm-publish.yml`) — previously said "not published to npm", stale since `bookie-mcp@0.7.11` shipped.
