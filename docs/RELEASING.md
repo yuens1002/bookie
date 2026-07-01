@@ -19,7 +19,7 @@ The maintainer runs the release locally:
 5. Pushing the tag automatically triggers `.github/workflows/npm-publish.yml`, which publishes `bookie-mcp@X.Y.Z` to npm.
 
 ## Publishing to npm
-`npm-publish.yml` runs on any `v*.*.*` tag push, verifies the tag matches `package.json`'s version, then runs `npm publish --access public` using a repo secret `NPM_TOKEN` (a granular access token from npmjs.com with 2FA bypass enabled for publishing). No manual publish step is needed — pushing the release tag is enough.
+`npm-publish.yml` runs on any `v*.*.*` tag push, verifies the tag matches `package.json`'s version, then runs `npm publish --access public` using a repo secret `NPM_TOKEN` — a granular access token (npmjs.com → Access Tokens) scoped to publish `bookie-mcp` without an interactive OTP prompt, since CI can't answer one. No manual publish step is needed — pushing the release tag is enough.
 
 ## Changelog
 `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com). Every user-facing change is logged under `[Unreleased]` in the PR that makes it, then promoted to a version on release.
