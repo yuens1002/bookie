@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - 'v*.*.*'
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'prisma/**'
+      - 'Dockerfile'
+      - 'package*.json'
   workflow_dispatch:
 
 permissions:

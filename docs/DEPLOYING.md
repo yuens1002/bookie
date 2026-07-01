@@ -40,10 +40,13 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
 
 ## Railway deploy
 
-1. Push your fork to GitHub.
-2. In Railway: **New Project → Deploy from GitHub repo** → select your fork.
-3. Railway auto-detects `Dockerfile` and `railway.json`.
-4. Set all required env vars under **Variables**.
+**Fastest path:** click the Deploy on Railway button in the README — Railway pulls the pre-built GHCR image and prompts for env vars.
+
+**From source:** fork the repo, then:
+
+1. In Railway: **New Project → Deploy from GitHub repo** → select your fork.
+2. Railway auto-detects `Dockerfile` and `railway.json`.
+3. Set all required env vars under **Variables**.
 5. Railway builds and starts the container. The deploy log shows:
    ```
    bookie MCP server ready on http://localhost:<PORT>/mcp

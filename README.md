@@ -53,12 +53,11 @@ BOOKIE_TRANSPORT=http BOOKIE_API_KEY=$(openssl rand -hex 32) npm start
 # Health check: GET  http://localhost:3000/health
 ```
 
-Deploy to Railway with the pre-built image or from source:
+Deploy to Railway with one click:
 
-- **From image (fastest):** Railway → New Project → Deploy from image → `ghcr.io/yuens1002/bookie-mcp:latest`
-- **From source:** Railway → New Project → Deploy from GitHub repo (auto-detects `Dockerfile` + `railway.json`)
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new?image=ghcr.io/yuens1002/bookie-mcp:latest)
 
-See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full walkthrough (Railway + Neon + Resend setup, env var reference, Claude.ai OAuth connector).
+Railway pulls the pre-built image from GHCR — no source build needed. Set the required env vars when prompted. See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full walkthrough (env var reference, Neon + Resend setup, Claude.ai OAuth connector).
 
 ## Why no UI?
 
