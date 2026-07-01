@@ -18,7 +18,7 @@ interface NeonConnectionParameters {
 
 interface NeonCreateOutput {
   project: { id: string };
-  connection_uris: Array<{
+  connection_uris?: Array<{
     connection_uri: string;
     connection_parameters: NeonConnectionParameters;
   }>;
@@ -50,8 +50,8 @@ export function checkNeonctl(): void {
 
 export function parseConnectionUris(json: string): ConnectionUris {
   const data = JSON.parse(json) as NeonCreateOutput;
-  const entry = data.connection_uris[0];
-  if (!entry) throw new Error("neonctl response missing connection_uris");
+  const entry = data.connection_uris?.[0];
+  if (!entry) throw new Error("neonctl response missing connection_uris — the project may not have been created; check neonctl output");
   const { connection_uri, connection_parameters: p } = entry;
   return {
     direct: connection_uri,
@@ -69,7 +69,7 @@ export function generateSecrets(): Secrets {
 
 export function parseEnvFile(content: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const line of content.split("\n")) {
+  for (const line of content.split(/\r?\n/)) {
     const m = line.match(/^([A-Z_][A-Z0-9_]*)=(.+)$/);
     if (m && m[1] && m[2]) out[m[1]] = m[2];
   }
@@ -109,9 +109,19 @@ async function main(): Promise<void> {
     ? parseEnvFile(readFileSync(envPath, "utf8"))
     : {};
 
-  // Create Neon project only if DB URLs are not already set
+  // Create Neon project only if both DB URLs are absent; error on partial config
+  const hasDbUrl = !!existing["BOOKIE_DB_URL"];
+  const hasDbDirect = !!existing["BOOKIE_DB_DIRECT_URL"];
+  if (hasDbUrl !== hasDbDirect) {
+    console.error(
+      "Partial DB config: exactly one of BOOKIE_DB_URL / BOOKIE_DB_DIRECT_URL is set.\n" +
+      "Either set both (to keep an existing DB) or clear both (to let setup create a new one).",
+    );
+    process.exit(1);
+  }
+
   let dbUrls: ConnectionUris | undefined;
-  if (!existing["BOOKIE_DB_URL"] || !existing["BOOKIE_DB_DIRECT_URL"]) {
+  if (!hasDbUrl && !hasDbDirect) {
     console.log("\nAuthenticating with Neon (browser will open if not already logged in)...");
     execSync("neonctl auth", { stdio: "inherit" });
 

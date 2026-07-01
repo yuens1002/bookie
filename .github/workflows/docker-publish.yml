@@ -53,8 +53,12 @@ jobs:
           RAILWAY_DEPLOY_WEBHOOK: ${{ secrets.RAILWAY_DEPLOY_WEBHOOK }}
         run: |
           if [ -n "$RAILWAY_DEPLOY_WEBHOOK" ]; then
-            curl -s -X POST "$RAILWAY_DEPLOY_WEBHOOK"
-            echo "Railway redeploy triggered."
+            if curl -s --fail -X POST "$RAILWAY_DEPLOY_WEBHOOK"; then
+              echo "Railway redeploy triggered."
+            else
+              echo "Railway redeploy webhook returned an error." >&2
+              exit 1
+            fi
           else
             echo "RAILWAY_DEPLOY_WEBHOOK not set — skipping Railway redeploy."
           fi
