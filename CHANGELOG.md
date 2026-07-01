@@ -6,6 +6,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+- 2026-07-01 — fix(deploy): point README's Railway deploy badge at a real Railway Template link; the prior `railway.app/new?image=...` URL isn't a supported Railway deploy mechanism and just opened the generic new-project picker
 - 2026-07-01 — fix(workflow): switch railway redeploy from webhook to railway cli
 - 2026-06-30 — fix(workflow): remove railway redeploy step; railway auto-deploys from GitHub source
 - 2026-06-30 — feat(p6): add npm run setup, ghcr publish workflow, railway one-click deploy badge
