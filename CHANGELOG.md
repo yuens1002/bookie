@@ -9,6 +9,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 ### Changed
+- `docs/RELEASING.md` and the `/release` skill now document that npm publish is automatic (triggered by the version-tag push, via `npm-publish.yml`) — previously said "not published to npm", stale since `bookie-mcp@0.7.11` shipped.
 
 ### Fixed
 

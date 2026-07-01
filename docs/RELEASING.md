@@ -1,6 +1,6 @@
 # Releasing bookie
 
-bookie follows [Semantic Versioning](https://semver.org). Releases are **GitHub Releases** (a tag + notes); bookie is **not published to npm** — it runs from source or the included Docker image against your own Neon Postgres.
+bookie follows [Semantic Versioning](https://semver.org). Releases are **GitHub Releases** (a tag + notes) and are also published to **npm** as [`bookie-mcp`](https://www.npmjs.com/package/bookie-mcp) — bookie can run from source, the included Docker image against your own Neon Postgres, or `npx bookie-mcp`.
 
 ## Versioning (0.x line)
 - **minor** (`0.Y.0`) — a roadmap-phase increment (a coherent batch of features). Breaking changes are allowed pre-1.0 and called out in the changelog.
@@ -16,6 +16,10 @@ The maintainer runs the release locally:
 2. Open a `chore(release): vX.Y.Z` PR and merge it.
 3. Tag the merge commit `vX.Y.Z` (annotated) and push it.
 4. `gh release create vX.Y.Z` with notes from the changelog section.
+5. Pushing the tag automatically triggers `.github/workflows/npm-publish.yml`, which publishes `bookie-mcp@X.Y.Z` to npm.
+
+## Publishing to npm
+`npm-publish.yml` runs on any `v*.*.*` tag push, verifies the tag matches `package.json`'s version, then runs `npm publish --access public` using a repo secret `NPM_TOKEN` — a granular access token (npmjs.com → Access Tokens) scoped to publish `bookie-mcp` without an interactive OTP prompt, since CI can't answer one. No manual publish step is needed — pushing the release tag is enough.
 
 ## Changelog
 `CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com). Every user-facing change is logged under `[Unreleased]` in the PR that makes it, then promoted to a version on release.
