@@ -6,6 +6,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.7.11] — 2026-07-01
+
 - 2026-07-01 — fix(workflow): move npm publish to its own workflow, untangled from the GHCR job's `paths` filter so it always runs on version-tag pushes; skip on tag deletion; verify the tag matches `package.json`'s version before publishing
 - 2026-07-01 — fix(deploy): point README's Railway deploy badge at a real Railway Template link; the prior `railway.app/new?image=...` URL isn't a supported Railway deploy mechanism and just opened the generic new-project picker
 - 2026-07-01 — fix(workflow): switch railway redeploy from webhook to railway cli
@@ -131,7 +139,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Auto-generated tool reference (`npm run docs:tools`).
 - Docs: README, Architecture, Roadmap, Changelog. Dockerfile + railway.json for deploy.
 
-[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.7.11...HEAD
+[0.7.11]: https://github.com/yuens1002/bookie/compare/v0.7.0...v0.7.11
 [0.7.0]: https://github.com/yuens1002/bookie/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/yuens1002/bookie/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/yuens1002/bookie/compare/v0.4.0...v0.5.0
