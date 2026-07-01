@@ -9,9 +9,15 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 ### Changed
-- `docs/RELEASING.md` and the `/release` skill now document that npm publish is automatic (triggered by the version-tag push, via `npm-publish.yml`) — previously said "not published to npm", stale since `bookie-mcp@0.7.11` shipped.
 
 ### Fixed
+
+## [0.8.0] — 2026-07-01
+
+Minor bump, not patch — retroactively marking the npm/Railway/GHCR distribution work already shipped in `0.7.9`–`0.7.11` (below) as its own roadmap-phase increment (P6: deployment & distribution), consistent with this project's versioning policy (minor = phase increment). No new user-facing behavior beyond `0.7.11` other than the docs fix below.
+
+### Changed
+- `docs/RELEASING.md` and the `/release` skill now document that npm publish is automatic (triggered by the version-tag push, via `npm-publish.yml`) — previously said "not published to npm", stale since `bookie-mcp@0.7.11` shipped.
 
 ## [0.7.11] — 2026-07-01
 
@@ -140,7 +146,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Auto-generated tool reference (`npm run docs:tools`).
 - Docs: README, Architecture, Roadmap, Changelog. Dockerfile + railway.json for deploy.
 
-[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.7.11...HEAD
+[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/yuens1002/bookie/compare/v0.7.11...v0.8.0
 [0.7.11]: https://github.com/yuens1002/bookie/compare/v0.7.0...v0.7.11
 [0.7.0]: https://github.com/yuens1002/bookie/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/yuens1002/bookie/compare/v0.5.0...v0.6.0
