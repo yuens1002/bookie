@@ -6,9 +6,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-- 2026-07-01 — fix(workflow): skip npm-publish job on tag deletion pushes
-- 2026-06-30 — feat(workflow): add npm publish job; publishes to npm on version tag push
+- 2026-07-01 — fix(workflow): move npm publish to its own workflow, untangled from the GHCR job's `paths` filter so it always runs on version-tag pushes; skip on tag deletion; verify the tag matches `package.json`'s version before publishing
 - 2026-07-01 — fix(workflow): switch railway redeploy from webhook to railway cli
+- 2026-06-30 — feat(workflow): add npm publish job; publishes to npm on version tag push
 - 2026-06-30 — fix(workflow): remove railway redeploy step; railway auto-deploys from GitHub source
 - 2026-06-30 — feat(p6): add npm run setup, ghcr publish workflow, railway one-click deploy badge
 
