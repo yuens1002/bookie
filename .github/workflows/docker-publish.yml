@@ -51,12 +51,13 @@ jobs:
       - name: Trigger Railway redeploy
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
           RAILWAY_SERVICE_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
         run: |
-          if [ -n "$RAILWAY_TOKEN" ] && [ -n "$RAILWAY_SERVICE_ID" ]; then
-            npm install -g @railway/cli
+          if [ -n "$RAILWAY_TOKEN" ] && [ -n "$RAILWAY_PROJECT_ID" ] && [ -n "$RAILWAY_SERVICE_ID" ]; then
+            npm install -g @railway/cli@5.23.3
             railway redeploy --service "$RAILWAY_SERVICE_ID" --yes
             echo "Railway redeploy triggered."
           else
-            echo "RAILWAY_TOKEN or RAILWAY_SERVICE_ID not set — skipping Railway redeploy."
+            echo "RAILWAY_TOKEN, RAILWAY_PROJECT_ID, or RAILWAY_SERVICE_ID not set — skipping Railway redeploy."
           fi
