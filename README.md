@@ -55,7 +55,7 @@ BOOKIE_TRANSPORT=http BOOKIE_API_KEY=$(openssl rand -hex 32) npm start
 
 Deploy to Railway with one click:
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new?image=ghcr.io/yuens1002/bookie-mcp:latest)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/X2T0sN?referralCode=X2mmSS)
 
 Railway pulls the pre-built image from GHCR — no source build needed. Set the required env vars when prompted. See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full walkthrough (env var reference, Neon + Resend setup, Claude.ai OAuth connector).
 
