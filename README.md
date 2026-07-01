@@ -4,50 +4,28 @@
 
 Ask your LLM to import a bank statement, categorize spending, reconcile a month, or generate a Schedule C. Bookie provides the correct double-entry ledger underneath — so the model reasons over real numbers, not a spreadsheet it's improvising on the fly.
 
-**This is for you if:** you're a solopreneur, freelancer, or rental property owner already living in Claude or GPT, you're comfortable with a 15-minute setup, and you want books that are actually correct.
+**This is for you if:** you're a solopreneur, freelancer, or rental property owner already living in Claude or GPT, you're comfortable with a 5-minute setup, and you want books that are actually correct.
 
 **Not for you if:** you want a dashboard UI, you need multi-user access, or you're satisfied with QuickBooks / a spreadsheet.
 
 ## What you need before starting
 
 - **Node ≥ 24**
-- **A [Neon](https://neon.tech) Postgres database** (free tier is enough — this is where the ledger lives)
+- **[neonctl](https://neon.com/docs/reference/neon-cli)** — `npm install -g neonctl` (free [Neon](https://neon.tech) account; setup creates the DB for you)
 - **An MCP-capable host:** Claude Desktop, Claude.ai, Cursor, VS Code, or any host supporting the MCP stdio or HTTP transport
 
 ## Quick start (local, stdio)
 
 ```bash
-# via npm (once published):
-npx bookie-mcp
-
-# or from source:
 git clone https://github.com/yuens1002/bookie
 cd bookie
-npm install                 # also runs `prisma generate`
-cp .env.example .env        # fill in BOOKIE_DB_URL / BOOKIE_DB_DIRECT_URL (Neon connection strings)
-npm run db:push             # apply schema to your Neon database
-npm run build               # compile to dist/
+npm install
+npm run setup   # creates Neon DB, generates secrets, writes .env, runs db:push
+npm run build
 ```
 
-Register with your MCP host — example for Claude Desktop (`claude_desktop_config.json`):
+`npm run setup` prints a ready-to-paste Claude Desktop config block at the end. Copy it into `claude_desktop_config.json`:
 
-**Via npm** (after `npm install -g bookie-mcp` or once published):
-```json
-{
-  "mcpServers": {
-    "bookie": {
-      "command": "npx",
-      "args": ["bookie-mcp"],
-      "env": {
-        "BOOKIE_DB_URL": "postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require",
-        "BOOKIE_DB_DIRECT_URL": "postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require"
-      }
-    }
-  }
-}
-```
-
-**From source** (after `npm run build`):
 ```json
 {
   "mcpServers": {
@@ -55,8 +33,9 @@ Register with your MCP host — example for Claude Desktop (`claude_desktop_conf
       "command": "node",
       "args": ["/absolute/path/to/bookie/dist/index.js"],
       "env": {
-        "BOOKIE_DB_URL": "postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require",
-        "BOOKIE_DB_DIRECT_URL": "postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require"
+        "BOOKIE_DB_URL": "<printed by setup>",
+        "BOOKIE_DB_DIRECT_URL": "<printed by setup>",
+        "BOOKIE_API_KEY": "<printed by setup>"
       }
     }
   }
@@ -74,7 +53,11 @@ BOOKIE_TRANSPORT=http BOOKIE_API_KEY=$(openssl rand -hex 32) npm start
 # Health check: GET  http://localhost:3000/health
 ```
 
-Deploy to Railway with the included `Dockerfile` / `railway.json` (the start command runs `prisma db push` then boots). See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full walkthrough (Railway + Neon + Resend setup, env var reference, Claude.ai OAuth connector).
+Deploy to Railway with one click:
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new?image=ghcr.io/yuens1002/bookie-mcp:latest)
+
+Railway pulls the pre-built image from GHCR — no source build needed. Set the required env vars when prompted. See [docs/DEPLOYING.md](docs/DEPLOYING.md) for the full walkthrough (env var reference, Neon + Resend setup, Claude.ai OAuth connector).
 
 ## Why no UI?
 

@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+- 2026-06-30 — feat(p6): add npm run setup, ghcr publish workflow, railway one-click deploy badge
+
 ### Changed
 - `src/lib/auth.ts`: `requireAuth()` now returns `{ ok: false }` when `BOOKIE_API_KEY` is unset rather than `{ ok: true }`, so OAuth JWT callers are correctly validated instead of being silently passed through.
 - `src/transports/http.ts`: HTTP transport now refuses to start unless at least `BOOKIE_API_KEY` or `JWT_SECRET` is configured — prevents accidentally deploying an unauthenticated financial endpoint.
