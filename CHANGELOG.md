@@ -11,6 +11,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 ### Fixed
+- `server.json`: version drift — the `/release` skill's own version bump (0.8.4 → 0.8.5) never propagated to `server.json`'s `version`/package-entry `version`, caught by `test/server-json.test.ts` failing on `main` immediately after the v0.8.5 release merged.
+
+### Fixed
 
 ## [0.8.5] — 2026-07-03
 
