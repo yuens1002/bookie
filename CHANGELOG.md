@@ -7,6 +7,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `test/dockerfile.test.ts`: asserts the Dockerfile's `ENV PORT` and `EXPOSE` values stay in sync — regression guard for the target-port mismatch that caused the v0.8.2 Railway 502 ("Application failed to respond").
 
 ### Changed
 
