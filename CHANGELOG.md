@@ -7,6 +7,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.8.2] — 2026-07-03
+
+### Added
 - `verify-npm-install` job in `npm-publish.yml` — after each publish, installs `bookie-mcp` from the registry into a disposable Neon project, pushes the bundled schema, and confirms the server responds over stdio via the MCP inspector CLI; the project is always deleted after (pass or fail — a `try/finally`). Requires a `NEON_API_KEY` repo secret.
 - `verify-npm-install` now files (or comments on an existing open) a GitHub issue when it fails, titled `verify-npm-install failed for <tag>` — previously a failure was only visible as a red check in the Actions tab, easy to miss. Dedups by title via `gh issue list --search`, so repeated failures for the same version comment on one issue instead of spamming duplicates. Needs `issues: write` permission, scoped to just this job.
 
@@ -158,7 +166,8 @@ Minor bump, not patch — retroactively marking the npm/Railway/GHCR distributio
 - Auto-generated tool reference (`npm run docs:tools`).
 - Docs: README, Architecture, Roadmap, Changelog. Dockerfile + railway.json for deploy.
 
-[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/yuens1002/bookie/compare/v0.8.0...v0.8.2
 [0.8.0]: https://github.com/yuens1002/bookie/compare/v0.7.11...v0.8.0
 [0.7.11]: https://github.com/yuens1002/bookie/compare/v0.7.0...v0.7.11
 [0.7.0]: https://github.com/yuens1002/bookie/compare/v0.6.0...v0.7.0
