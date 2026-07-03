@@ -20,7 +20,7 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
 | `OAUTH_CLIENT_ID` | For Claude.ai connector | Client ID allowlisted for the connector (default: `claude-ai-connector`) |
 | `OAUTH_CLIENT_SECRET` | Required for Claude.ai connector | Single-owner gate: `/authorize` refuses all requests unless this is set, preventing any visitor from authorizing themselves. Enter this value in the "OAuth Client Secret" field in Claude.ai connector settings. Generate with `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"` |
 | `OAUTH_REDIRECT_URIS` | For Claude.ai connector | Comma-separated allowlist of permitted `redirect_uri` values (default: `https://claude.ai/api/mcp/auth_callback`) |
-| `PORT` | No | HTTP port (default: 3000; Railway sets this automatically) |
+| `PORT` | No | HTTP port (runtime default: 3000 if unset; the Dockerfile pins `PORT=8080` for containers/Railway so it matches the image's `EXPOSE`, which Railway auto-detects for the public domain's target port) |
 | `RESEND_API_KEY` | For `send_report` | Resend API key (`re_...`) from the Resend dashboard |
 | `RESEND_FROM` | For `send_report` | Verified sender address (e.g. `Bookie <books@yourdomain.com>`) |
 | `RATE_LIMIT_RPM` | No | Max `/mcp` requests per minute per IP (default: 60) |
@@ -56,6 +56,7 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
    curl https://<your-app>.up.railway.app/health
    # → {"ok":true,"service":"bookie","transport":"http"}
    ```
+   If this 502s ("Application failed to respond") while the deploy log shows the server as ready, the public domain's **target port** doesn't match `PORT` (8080) — check **Settings → Networking** on the service and correct it. This shouldn't happen off the Dockerfile's `EXPOSE 8080` (Railway auto-detects it), but if you've overridden `PORT` or added the domain manually, verify the two agree.
 7. Verify auth on the MCP endpoint:
    ```bash
    curl -X POST https://<your-app>.up.railway.app/mcp \

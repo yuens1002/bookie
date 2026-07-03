@@ -1,5 +1,8 @@
 # bookie
 
+[![npm](https://img.shields.io/npm/v/bookie-mcp)](https://www.npmjs.com/package/bookie-mcp)
+[![Publish to npm](https://github.com/yuens1002/bookie/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/yuens1002/bookie/actions/workflows/npm-publish.yml)
+
 **An MCP server that keeps books for freelancers and landlords — driven from Claude or GPT instead of QuickBooks.**
 
 Ask your LLM to import a bank statement, categorize spending, reconcile a month, or generate a Schedule C. Bookie provides the correct double-entry ledger underneath — so the model reasons over real numbers, not a spreadsheet it's improvising on the fly.
@@ -11,10 +14,12 @@ Ask your LLM to import a bank statement, categorize spending, reconcile a month,
 ## What you need before starting
 
 - **Node ≥ 24**
-- **[neonctl](https://neon.com/docs/reference/neon-cli)** — `npm install -g neonctl` (free [Neon](https://neon.tech) account; setup creates the DB for you)
+- **[neonctl](https://neon.com/docs/reference/neon-cli)** — `npm install -g neonctl` (free [Neon](https://neon.tech) account; needed for the DB)
 - **An MCP-capable host:** Claude Desktop, Claude.ai, Cursor, VS Code, or any host supporting the MCP stdio or HTTP transport
 
 ## Quick start (local, stdio)
+
+**Recommended — from source, fully automated:**
 
 ```bash
 git clone https://github.com/yuens1002/bookie
@@ -24,7 +29,9 @@ npm run setup   # creates Neon DB, generates secrets, writes .env, runs db:push
 npm run build
 ```
 
-`npm run setup` prints a ready-to-paste Claude Desktop config block at the end. Copy it into `claude_desktop_config.json`:
+`npm run setup` opens a browser to log into Neon; new to Neon? Use the "Sign up for an account" link and pick GitHub/Google/Microsoft rather than email+password — it completes in the same browser round-trip, no email-verification detour that could interrupt the CLI mid-wait.
+
+`npm run setup` prints a ready-to-paste Claude Desktop config block at the end:
 
 ```json
 {
@@ -42,16 +49,37 @@ npm run build
 }
 ```
 
-Point all MCP clients at the **same `BOOKIE_DB_URL`** so Claude Desktop, Claude.ai (mobile), and any other host share one ledger.
+**Adding another machine to the same ledger — no clone needed:** stdio is a *local* process — every machine running a stdio MCP client spawns its own copy of the server, so each one otherwise needs its own checkout. Once the Neon DB is provisioned (via `npm run setup` above, on any one machine), every *other* machine just needs the same connection strings — no `git clone`, no `npm install`, no `npm run build` to keep in sync. Point that machine's MCP host at the [published package](https://www.npmjs.com/package/bookie-mcp) instead:
 
-## Quick start (remote, HTTP — for Claude.ai mobile)
+```json
+{
+  "mcpServers": {
+    "bookie": {
+      "command": "npx",
+      "args": ["-y", "bookie-mcp"],
+      "env": {
+        "BOOKIE_DB_URL": "<same value as your first machine>",
+        "BOOKIE_DB_DIRECT_URL": "<same value as your first machine>",
+        "BOOKIE_API_KEY": "<same value as your first machine>"
+      }
+    }
+  }
+}
+```
+
+`npx` fetches and runs the published version on demand — every machine pointed at the same `BOOKIE_DB_URL` shares one ledger, without any of them (besides the original) needing a checkout.
+
+**Bootstrapping a DB without cloning at all:** if you don't have connection strings yet from any machine (e.g. you created the Neon project manually instead of via `npm run setup`), push bookie's bundled schema directly:
 
 ```bash
-npm run build
-BOOKIE_TRANSPORT=http BOOKIE_API_KEY=$(openssl rand -hex 32) npm start
-# MCP endpoint: POST http://localhost:3000/mcp  (also POST / — used by Claude.ai connector)
-# Health check: GET  http://localhost:3000/health
+mkdir bookie-mcp && cd bookie-mcp
+npm install bookie-mcp
+BOOKIE_DB_URL=<pooled> BOOKIE_DB_DIRECT_URL=<direct> npx prisma db push --schema=node_modules/bookie-mcp/prisma/schema.prisma
 ```
+
+Then use the same `npx -y bookie-mcp` config above.
+
+## Quick start (remote, HTTP — for Claude.ai mobile)
 
 Deploy to Railway with one click:
 

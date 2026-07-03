@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, configDefaults } from "vitest/config";
 
 export default defineConfig({
   // NodeNext source uses explicit ".js" import specifiers that point at ".ts"
@@ -31,5 +31,9 @@ export default defineConfig({
     // Neon round-trips (and cold starts) can exceed the 5s default.
     testTimeout: 30000,
     hookTimeout: 30000,
+    // .claude/worktrees/** can hold full nested checkouts (agent worktree
+    // isolation); vitest's defaults don't exclude .claude, so a stray one
+    // silently double-runs the whole suite via its own copy of test/**.
+    exclude: [...configDefaults.exclude, ".claude/**"],
   },
 });

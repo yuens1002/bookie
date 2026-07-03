@@ -59,6 +59,67 @@ export function parseConnectionUris(json: string): ConnectionUris {
   };
 }
 
+// `neonctl projects create` requires an --org-id; without one it drops into
+// an interactive picker that hangs when stdout isn't a real TTY (always true
+// under execSync) — every brand-new account hits this, since a fresh account
+// has no cached "current org" to fall back on.
+export function resolveOrgId(rawOrgsJson: string, envOverride?: string): string {
+  if (envOverride) return envOverride;
+  const orgs = JSON.parse(rawOrgsJson) as Array<{ id: string; name: string }>;
+  if (orgs.length === 0) {
+    throw new Error(
+      "No Neon organizations found for this account — every authenticated Neon account should have at least a personal org.",
+    );
+  }
+  if (orgs.length > 1) {
+    const list = orgs.map((o) => `  ${o.id}  (${o.name})`).join("\n");
+    throw new Error(`Multiple Neon organizations found — set NEON_ORG_ID to pick one:\n${list}`);
+  }
+  const org = orgs[0];
+  if (!org) throw new Error("neonctl orgs list returned an empty entry");
+  return org.id;
+}
+
+export interface NeonProjectSummary {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+// Neon allows multiple projects with the same name in one org — creating
+// "bookie" a second time silently succeeds with a distinct project id, no
+// error, no warning. Check first so a re-run (deliberate second ledger, or
+// an accidental re-run after losing .env) doesn't produce two same-named,
+// hard-to-tell-apart projects.
+export function findExistingProject(
+  rawProjectsJson: string,
+  name: string,
+): NeonProjectSummary | undefined {
+  const projects = JSON.parse(rawProjectsJson) as NeonProjectSummary[];
+  return projects.find((p) => p.name === name);
+}
+
+// Generic retry for flaky external steps (npm registry replication lag,
+// Neon compute cold-start on a just-created project — see vitest.config.ts's
+// testTimeout comment for the same underlying Neon characteristic).
+export async function retry<T>(
+  fn: () => T,
+  attempts: number,
+  delayMs: number,
+  onRetry?: (attempt: number, attempts: number) => void,
+): Promise<T> {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return fn();
+    } catch (err) {
+      if (attempt === attempts) throw err;
+      onRetry?.(attempt, attempts);
+      await new Promise((res) => setTimeout(res, delayMs));
+    }
+  }
+  throw new Error("unreachable");
+}
+
 export function generateSecrets(): Secrets {
   return {
     BOOKIE_API_KEY: crypto.randomBytes(32).toString("hex"),
@@ -80,7 +141,13 @@ export function buildEnvContent(
   template: string,
   overrides: Record<string, string>,
 ): string {
+  // Normalize CRLF before splitting: on Windows, git checks .env.example out
+  // with CRLF by default, and a plain split("\n") leaves a trailing "\r" on
+  // every line. "." doesn't match "\r" and "$" requires true end-of-string,
+  // so the line regex below silently fails to match ANY line — every value
+  // (secrets, DB URLs, all of it) would come back as the unmodified template.
   return template
+    .replace(/\r\n/g, "\n")
     .split("\n")
     .map((line) => {
       const m = line.match(/^([A-Z_][A-Z0-9_]*)=.*$/);
@@ -125,8 +192,26 @@ async function main(): Promise<void> {
     console.log("\nAuthenticating with Neon (browser will open if not already logged in)...");
     execSync("neonctl auth", { stdio: "inherit" });
 
-    console.log("Creating Neon project 'bookie'...");
-    const raw = execSync("neonctl projects create --name bookie --output json", {
+    const orgsRaw = execSync("neonctl orgs list --output json", { encoding: "utf8" });
+    const orgId = resolveOrgId(orgsRaw, process.env.NEON_ORG_ID);
+
+    const projectName = process.env.NEON_PROJECT_NAME || "bookie";
+    const projectsRaw = execSync(`neonctl projects list --org-id "${orgId}" --output json`, { encoding: "utf8" });
+    const collision = findExistingProject(projectsRaw, projectName);
+    if (collision) {
+      console.error(
+        `A Neon project named '${projectName}' already exists (id: ${collision.id}, created ${collision.created_at}).\n` +
+        "Neon allows duplicate names, so creating another would succeed but leave two easily-confused same-named projects.\n\n" +
+        "To connect to the EXISTING project instead: set BOOKIE_DB_URL / BOOKIE_DB_DIRECT_URL in .env yourself " +
+        "(copy its connection strings from the Neon console) rather than running setup.\n" +
+        "To deliberately create a SECOND, independent ledger: re-run with a distinct name, e.g. " +
+        "NEON_PROJECT_NAME=bookie-rentals npm run setup",
+      );
+      process.exit(1);
+    }
+
+    console.log(`Creating Neon project '${projectName}'...`);
+    const raw = execSync(`neonctl projects create --name "${projectName}" --org-id "${orgId}" --output json`, {
       encoding: "utf8",
       stdio: ["inherit", "pipe", "inherit"],
     });
@@ -154,7 +239,13 @@ async function main(): Promise<void> {
   console.log(".env written.");
 
   console.log("\nApplying schema to database...");
-  execSync("npx prisma db push", { stdio: "inherit", cwd: rootDir });
+  await retry(
+    () => execSync("npx prisma db push", { stdio: "inherit", cwd: rootDir }),
+    5,
+    4000,
+    (attempt, attempts) =>
+      console.log(`Schema push attempt ${attempt}/${attempts} failed (Neon compute may still be starting up) — retrying...`),
+  );
 
   const apiKey = overrides["BOOKIE_API_KEY"] ?? "";
   const dbUrl = overrides["BOOKIE_DB_URL"] ?? "";
