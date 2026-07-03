@@ -8,6 +8,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 - `test/dockerfile.test.ts`: asserts the Dockerfile's `ENV PORT` and `EXPOSE` values stay in sync — regression guard for the target-port mismatch that caused the v0.8.2 Railway 502 ("Application failed to respond").
+- `server.json` + `package.json`'s `mcpName` field: publishes bookie's metadata to the official MCP Registry (`registry.modelcontextprotocol.io`), so directories like PulseMCP can auto-discover it instead of requiring a separate manual submission per directory.
 
 ### Changed
 
