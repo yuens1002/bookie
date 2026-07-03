@@ -20,7 +20,7 @@ bookie runs as a single Node.js process (Streamable HTTP MCP transport) against 
 | `OAUTH_CLIENT_ID` | For Claude.ai connector | Client ID allowlisted for the connector (default: `claude-ai-connector`) |
 | `OAUTH_CLIENT_SECRET` | Required for Claude.ai connector | Single-owner gate: `/authorize` refuses all requests unless this is set, preventing any visitor from authorizing themselves. Enter this value in the "OAuth Client Secret" field in Claude.ai connector settings. Generate with `node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"` |
 | `OAUTH_REDIRECT_URIS` | For Claude.ai connector | Comma-separated allowlist of permitted `redirect_uri` values (default: `https://claude.ai/api/mcp/auth_callback`) |
-| `PORT` | No | HTTP port (default: 8080, pinned in the Dockerfile so it matches the image's `EXPOSE`; Railway auto-detects it for the public domain's target port) |
+| `PORT` | No | HTTP port (runtime default: 3000 if unset; the Dockerfile pins `PORT=8080` for containers/Railway so it matches the image's `EXPOSE`, which Railway auto-detects for the public domain's target port) |
 | `RESEND_API_KEY` | For `send_report` | Resend API key (`re_...`) from the Resend dashboard |
 | `RESEND_FROM` | For `send_report` | Verified sender address (e.g. `Bookie <books@yourdomain.com>`) |
 | `RATE_LIMIT_RPM` | No | Max `/mcp` requests per minute per IP (default: 60) |

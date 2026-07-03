@@ -196,7 +196,7 @@ async function main(): Promise<void> {
     const orgId = resolveOrgId(orgsRaw, process.env.NEON_ORG_ID);
 
     const projectName = process.env.NEON_PROJECT_NAME || "bookie";
-    const projectsRaw = execSync(`neonctl projects list --org-id ${orgId} --output json`, { encoding: "utf8" });
+    const projectsRaw = execSync(`neonctl projects list --org-id "${orgId}" --output json`, { encoding: "utf8" });
     const collision = findExistingProject(projectsRaw, projectName);
     if (collision) {
       console.error(
@@ -211,7 +211,7 @@ async function main(): Promise<void> {
     }
 
     console.log(`Creating Neon project '${projectName}'...`);
-    const raw = execSync(`neonctl projects create --name ${projectName} --org-id ${orgId} --output json`, {
+    const raw = execSync(`neonctl projects create --name "${projectName}" --org-id "${orgId}" --output json`, {
       encoding: "utf8",
       stdio: ["inherit", "pipe", "inherit"],
     });

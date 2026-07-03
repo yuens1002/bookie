@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   const orgId = resolveOrgId(orgsRaw, process.env.NEON_ORG_ID);
 
   console.log(`Creating disposable Neon project '${projectName}'...`);
-  const raw = run(`npx neonctl projects create --name ${projectName} --org-id ${orgId} --output json`, rootDir);
+  const raw = run(`npx neonctl projects create --name "${projectName}" --org-id "${orgId}" --output json`, rootDir);
   const projectId = (JSON.parse(raw) as { project: { id: string } }).project.id;
   const { pooled, direct } = parseConnectionUris(raw);
   const dbEnv = { BOOKIE_DB_URL: pooled, BOOKIE_DB_DIRECT_URL: direct };
@@ -74,7 +74,7 @@ async function main(): Promise<void> {
     rmSync(workDir, { recursive: true, force: true });
     console.log(`Deleting disposable Neon project '${projectId}'...`);
     try {
-      execSync(`npx neonctl projects delete ${projectId} --org-id ${orgId}`, { stdio: "inherit" });
+      execSync(`npx neonctl projects delete "${projectId}" --org-id "${orgId}"`, { stdio: "inherit" });
     } catch (err) {
       console.error(`Warning: failed to delete disposable project '${projectId}' — ${err instanceof Error ? err.message : String(err)}`);
     }
