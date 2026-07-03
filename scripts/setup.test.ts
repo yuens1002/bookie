@@ -6,6 +6,9 @@ import {
   parseConnectionUris,
   buildEnvContent,
   parseEnvFile,
+  resolveOrgId,
+  findExistingProject,
+  retry,
 } from "./setup.js";
 
 vi.mock("node:child_process", () => ({
@@ -112,6 +115,17 @@ describe("buildEnvContent", () => {
     expect(out).toContain("JWT_SECRET=some");
   });
 
+  it("substitutes values in a CRLF-terminated template (Windows git checkout)", () => {
+    // Regression: git on Windows checks .env.example out with CRLF by default.
+    // A naive split("\n") leaves a trailing "\r" on every line, and "." doesn't
+    // match "\r" — the per-line regex used to silently fail to match ANY line,
+    // so every generated secret/URL came back as the raw, unmodified template.
+    const crlfTemplate = template.split("\n").join("\r\n");
+    const out = buildEnvContent(crlfTemplate, { BOOKIE_DB_URL: "postgres://real-value" });
+    expect(out).toContain("BOOKIE_DB_URL=postgres://real-value");
+    expect(out).not.toContain("BOOKIE_DB_URL=\r");
+  });
+
   it("idempotency: when existing .env values are passed as overrides, they are preserved", () => {
     // Simulate second run: existing BOOKIE_DB_URL wins via { ...generated, ...existing }
     const overrides = {
@@ -121,6 +135,87 @@ describe("buildEnvContent", () => {
     const out = buildEnvContent(template, overrides);
     expect(out).toContain("BOOKIE_DB_URL=postgres://existing");
     expect(out).toContain("BOOKIE_API_KEY=generated-key");
+  });
+});
+
+describe("resolveOrgId", () => {
+  it("returns the envOverride without touching the orgs list", () => {
+    expect(resolveOrgId("not valid json", "org-explicit")).toBe("org-explicit");
+  });
+
+  it("auto-selects the single org when exactly one exists", () => {
+    const raw = JSON.stringify([{ id: "org-solo-123", name: "sunny@yuens.me" }]);
+    expect(resolveOrgId(raw)).toBe("org-solo-123");
+  });
+
+  it("throws with NEON_ORG_ID guidance when multiple orgs exist", () => {
+    const raw = JSON.stringify([
+      { id: "org-a", name: "personal" },
+      { id: "org-b", name: "work" },
+    ]);
+    expect(() => resolveOrgId(raw)).toThrow(/NEON_ORG_ID/);
+  });
+
+  it("throws when the account has no orgs at all", () => {
+    expect(() => resolveOrgId("[]")).toThrow(/No Neon organizations/);
+  });
+});
+
+describe("findExistingProject", () => {
+  const projects = JSON.stringify([
+    { id: "lucky-term-1", name: "bookie", created_at: "2026-06-03T00:00:00Z" },
+    { id: "square-silence-2", name: "brew-guide", created_at: "2026-05-26T00:00:00Z" },
+  ]);
+
+  it("finds a project matching the given name", () => {
+    const found = findExistingProject(projects, "bookie");
+    expect(found?.id).toBe("lucky-term-1");
+  });
+
+  it("returns undefined when no project matches", () => {
+    expect(findExistingProject(projects, "bookie-rentals")).toBeUndefined();
+  });
+
+  it("returns undefined for an empty projects list", () => {
+    expect(findExistingProject("[]", "bookie")).toBeUndefined();
+  });
+});
+
+describe("retry", () => {
+  it("returns the result on first success without retrying", async () => {
+    const fn = vi.fn(() => "ok");
+    await expect(retry(fn, 3, 0)).resolves.toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries after failures and returns once it succeeds", async () => {
+    let calls = 0;
+    const fn = vi.fn(() => {
+      calls++;
+      if (calls < 3) throw new Error("transient");
+      return "ok";
+    });
+    await expect(retry(fn, 5, 0)).resolves.toBe("ok");
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  it("throws the underlying error after exhausting all attempts", async () => {
+    const fn = vi.fn(() => {
+      throw new Error("permanent");
+    });
+    await expect(retry(fn, 3, 0)).rejects.toThrow("permanent");
+    expect(fn).toHaveBeenCalledTimes(3);
+  });
+
+  it("calls onRetry once per failed attempt, not on the final throw", async () => {
+    const onRetry = vi.fn();
+    const fn = vi.fn(() => {
+      throw new Error("permanent");
+    });
+    await expect(retry(fn, 3, 0, onRetry)).rejects.toThrow();
+    expect(onRetry).toHaveBeenCalledTimes(2);
+    expect(onRetry).toHaveBeenNthCalledWith(1, 1, 3);
+    expect(onRetry).toHaveBeenNthCalledWith(2, 2, 3);
   });
 });
 

@@ -41,3 +41,43 @@ jobs:
         run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  verify-npm-install:
+    name: Verify published install
+    needs: npm-publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify the published package installs and runs end-to-end
+        run: npx tsx scripts/verify-published-install.ts
+        env:
+          PACKAGE_VERSION: ${{ github.ref_name }}
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+
+      - name: File a GitHub issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="verify-npm-install failed for ${{ github.ref_name }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY="The verify-npm-install job failed for bookie-mcp@${{ github.ref_name }}. The published npm package may not actually install and run correctly — investigate before relying on it. Run: $RUN_URL"
+          EXISTING=$(gh issue list --state open --search "in:title \"$TITLE\"" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "Failed again: $RUN_URL"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi
