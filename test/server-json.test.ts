@@ -19,4 +19,13 @@ describe("server.json", () => {
     const npmPackage = server.packages.find((p: { registryType: string }) => p.registryType === "npm");
     expect(npmPackage?.identifier).toBe(pkg.name);
   });
+
+  it("top-level `version` matches package.json's `version`", () => {
+    expect(server.version).toBe(pkg.version);
+  });
+
+  it("npm package entry's `version` matches package.json's `version`", () => {
+    const npmPackage = server.packages.find((p: { registryType: string }) => p.registryType === "npm");
+    expect(npmPackage?.version).toBe(pkg.version);
+  });
 });
