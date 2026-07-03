@@ -36,6 +36,7 @@ describe("server.json", () => {
   });
 
   it("npm package entry's `version` matches CHANGELOG.md's latest released version", () => {
+    expect(lastReleasedVersion, "expected a `## [X.Y.Z] — date` heading in CHANGELOG.md").toBeDefined();
     const npmPackage = server.packages.find((p: { registryType: string }) => p.registryType === "npm");
     expect(npmPackage?.version).toBe(lastReleasedVersion);
   });
