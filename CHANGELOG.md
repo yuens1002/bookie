@@ -7,6 +7,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.8.5] — 2026-07-03
+
+### Added
 - `test/dockerfile.test.ts`: asserts the Dockerfile's `ENV PORT` and `EXPOSE` values stay in sync — regression guard for the target-port mismatch that caused the v0.8.2 Railway 502 ("Application failed to respond").
 - `server.json` + `package.json`'s `mcpName` field: publishes bookie's metadata to the official MCP Registry (`registry.modelcontextprotocol.io`), so directories like PulseMCP can auto-discover it instead of requiring a separate manual submission per directory.
 
@@ -168,7 +176,8 @@ Minor bump, not patch — retroactively marking the npm/Railway/GHCR distributio
 - Auto-generated tool reference (`npm run docs:tools`).
 - Docs: README, Architecture, Roadmap, Changelog. Dockerfile + railway.json for deploy.
 
-[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.5...HEAD
+[0.8.5]: https://github.com/yuens1002/bookie/compare/v0.8.2...v0.8.5
 [0.8.2]: https://github.com/yuens1002/bookie/compare/v0.8.0...v0.8.2
 [0.8.0]: https://github.com/yuens1002/bookie/compare/v0.7.11...v0.8.0
 [0.7.11]: https://github.com/yuens1002/bookie/compare/v0.7.0...v0.7.11
