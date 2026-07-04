@@ -79,8 +79,10 @@ export function registerReceiptTools(server: McpServer): void {
         if (!args.entryId) return fail("`entryId` is required for action='attach'.");
         if (args.fileContent && !args.mimeType) return fail("`mimeType` is required when `fileContent` is provided.");
         if (!args.fileContent && args.mimeType) return fail("`fileContent` is required when `mimeType` is provided.");
-        if (args.fileContent && !blobConfigured())
-          return fail("Receipt file storage is not configured. Add the Railway Bucket to this service.");
+        // On mobile (e.g. Claude.ai), the client can vision-extract receipt fields but cannot
+        // base64-encode raw file bytes. If fileContent is passed but bucket is not configured,
+        // skip the upload and return hasFile:false — structured data is still saved.
+        const skipFileUpload = !!(args.fileContent && !blobConfigured());
 
         const entry = await prisma.journalEntry.findUnique({
           where: { id: args.entryId },
@@ -106,7 +108,7 @@ export function registerReceiptTools(server: McpServer): void {
         let fileKey: string | null = null;
         let fileUrl: string | null = null;
 
-        if (args.fileContent && args.mimeType) {
+        if (!skipFileUpload && args.fileContent && args.mimeType) {
           const buf = Buffer.from(args.fileContent, "base64");
           fileKey = `receipts/${id}`;
           try {
@@ -149,6 +151,12 @@ export function registerReceiptTools(server: McpServer): void {
           hasFile: fileKey !== null,
           mimeType: fileKey !== null ? (args.mimeType ?? null) : null,
           ...(fileUrl ? { fileUrl, fileUrlExpiresIn: "1 hour" } : {}),
+          ...(skipFileUpload
+            ? {
+                fileWarning:
+                  "File not stored: bucket not configured. Structured receipt data was saved. On mobile, omit fileContent and pass structured fields only.",
+              }
+            : {}),
         });
       }
 

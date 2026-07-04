@@ -6,6 +6,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- `manage_receipts`: gracefully degrade (save structured data, return `hasFile:false` + a `fileWarning`) instead of hard-failing when `fileContent` is provided but Railway Bucket isn't configured — matches the mobile client flow (Claude.ai vision-extracts fields, can't base64-encode raw file bytes).
+
 ### Added
 
 ### Changed
