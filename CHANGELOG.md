@@ -6,14 +6,13 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-### Fixed
-- `manage_receipts`: gracefully degrade (save structured data, return `hasFile:false` + a `fileWarning`) instead of hard-failing when `fileContent` is provided but Railway Bucket isn't configured — matches the mobile client flow (Claude.ai vision-extracts fields, can't base64-encode raw file bytes).
-
 ### Added
 
 ### Changed
+- `manage_receipts`: tool description now explicitly directs Claude.ai (mobile/web) clients to never pass `fileContent`, explains why no client-side upload workaround exists (raw file bytes are unreachable; a signed-URL upload path was tried and removed because Claude.ai's sandboxed runtime blocks outbound HTTP requests — see PR #28), and clarifies that `hasFile:false` from a structured-only attach is the correct, complete outcome, not a fallback. `docs/TOOLS.md` regenerated (also picked up pre-existing drift from PR #30's `add_transaction`/`import_transactions` describe clarifications, which had never been regenerated).
 
 ### Fixed
+- `manage_receipts`: gracefully degrade (save structured data, return `hasFile:false` + a `fileWarning`) instead of hard-failing when `fileContent` is provided but Railway Bucket isn't configured — matches the mobile client flow (Claude.ai vision-extracts fields, can't base64-encode raw file bytes).
 - `server.json`: version drift — the `/release` skill's own version bump (0.8.4 → 0.8.5) never propagated to `server.json`'s `version`/package-entry `version`, caught by `test/server-json.test.ts` failing on `main` immediately after the v0.8.5 release merged.
 
 ## [0.8.5] — 2026-07-03

@@ -21,7 +21,10 @@ export function registerReceiptTools(server: McpServer): void {
     {
       title: "Manage receipts",
       description:
-        "Attach, list, delete, or retrieve a download URL for receipt data linked to a journal entry. The client LLM extracts merchant, date, total, and line items from a receipt image or text; pass those extracted fields here to store them against an existing entry. Structured data (merchant, date, total, line items) is always stored — no bucket required. File attachment is optional: if the raw file bytes are accessible (e.g. Claude Desktop reading a local file), pass fileContent (base64-encoded, JPEG/PNG/WEBP/HEIC/PDF, practical limit ~500 KB before encoding) + mimeType to upload the file to object storage and receive a signed 1-hour download URL. Both fields are required together; either alone is an error. File storage requires Railway Bucket env vars. Claude.ai mobile clients use vision to extract fields from the receipt image in conversation — in that workflow, call attach with structured fields only and no fileContent. One entry can have multiple receipts.",
+        "Attach, list, delete, or retrieve a download URL for receipt data linked to a journal entry. The client LLM extracts merchant, date, total, and line items from a receipt image or text; pass those extracted fields here to store them against an existing entry. Structured data (merchant, date, total, line items) is always stored — no bucket required, and this is the correct outcome on its own, not a fallback. " +
+        "On Claude.ai (mobile or web): call attach with structured fields ONLY and never pass fileContent — vision reads the fields from the image shown in conversation, and hasFile:false in the response is correct, not an error. Do not attempt to send fileContent from these clients: there is no way to obtain raw file bytes to encode, and a signed-URL upload workaround was tried and removed (`refactor(receipts): remove presigned PUT upload path`, PR #28) because Claude.ai's sandboxed runtime blocks outbound HTTP requests to arbitrary URLs — no client-side upload path exists for these clients, full stop. " +
+        "File attachment (uploading the original image/PDF to object storage) is a separate, optional path, usable only when the client has direct access to raw file bytes on disk (e.g. Claude Desktop reading a local file): pass fileContent (base64-encoded, JPEG/PNG/WEBP/HEIC/PDF, practical limit ~500 KB before encoding) + mimeType together to upload the file and receive a signed 1-hour download URL. Both fields are required together; either alone is an error. File storage additionally requires Railway Bucket env vars — if absent, fileContent is ignored (a fileWarning is returned) and structured data still saves. " +
+        "One entry can have multiple receipts — e.g. a mobile structured-only attach now, and a desktop file attach later for the same entryId if the original image is worth archiving.",
       inputSchema: {
         action: z
           .enum(["attach", "list", "delete", "get_url"])
@@ -50,7 +53,7 @@ export function registerReceiptTools(server: McpServer): void {
           .string()
           .optional()
           .describe(
-            "(attach) Base64-encoded receipt file (JPEG, PNG, WEBP, HEIC, or PDF). Must be paired with mimeType. Requires Railway Bucket env vars. Only pass when you have direct access to the file bytes (e.g. Claude Desktop reading a local file). Omit to store structured data only (always valid, no bucket required).",
+            "(attach) Base64-encoded receipt file (JPEG, PNG, WEBP, HEIC, or PDF). Must be paired with mimeType. Requires Railway Bucket env vars. Only pass when you have direct access to the file bytes (e.g. Claude Desktop reading a local file) — NEVER pass this from Claude.ai mobile or web; those clients cannot obtain raw file bytes and have no upload workaround. Omit to store structured data only (always valid, no bucket required, and the correct call shape on Claude.ai).",
           ),
         mimeType: z
           .enum(["image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"])
