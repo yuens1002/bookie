@@ -155,6 +155,17 @@ describe("manage_receipts — attach", () => {
     expect(block0.type === "text" && block0.text).toMatch(/fileContent.*required/i);
   });
 
+  it("rejects an empty-string fileContent rather than silently treating it as no file", async () => {
+    const entryId = await createEntry("2026-09-04", "Validation Test C");
+    const res = (await client.callTool({
+      name: "manage_receipts",
+      arguments: { action: "attach", entryId, fileContent: "", mimeType: "image/jpeg" },
+    })) as CallToolResult;
+    expect(res.isError).toBe(true);
+    const block0 = res.content[0]!;
+    expect(block0.type === "text" && block0.text).toMatch(/fileContent/i);
+  });
+
   it("degrades gracefully (saves structured data, skips upload) when fileContent is provided but bucket is not configured", async () => {
     // Explicitly clear bucket env vars so this test is deterministic regardless of local/CI environment.
     const saved = {

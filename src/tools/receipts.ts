@@ -51,6 +51,7 @@ export function registerReceiptTools(server: McpServer): void {
           .describe("(attach) Itemized line items extracted from the receipt. Amounts are in dollars."),
         fileContent: z
           .string()
+          .min(1, "fileContent cannot be empty — omit the field entirely to store structured data only")
           .optional()
           .describe(
             "(attach) Base64-encoded receipt file (JPEG, PNG, WEBP, HEIC, or PDF). Must be paired with mimeType. Requires Railway Bucket env vars. Only pass when you have direct access to the file bytes (e.g. Claude Desktop reading a local file) — NEVER pass this from Claude.ai mobile or web; those clients cannot obtain raw file bytes and have no upload workaround. Omit to store structured data only (always valid, no bucket required, and the correct call shape on Claude.ai).",
