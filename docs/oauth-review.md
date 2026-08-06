@@ -87,6 +87,14 @@ A crafted auth URL with a malicious `redirect_uri` sends the auth code to an att
 ### F6 — Expired refresh tokens accumulate forever (MINOR — operational)
 `rotateRefreshToken` marks old tokens `consumed: true` but never deletes them. `issueRefreshToken` adds a new row every OAuth session. Over time `oauth_tokens` grows unbounded. The `@@index([expiresAt])` is there; a periodic `deleteMany({ where: { expiresAt: { lt: new Date() } } })` (e.g. in the same `setInterval` that cleans auth codes) would be enough.
 
+> **⚠️ Superseded — do not apply the `setInterval` remedy above.** It was implemented as
+> suggested and caused an outage: a 60-second query kept the serverless Postgres compute
+> from ever scaling to zero, consuming ~94% of the monthly compute allowance while idle.
+> When the allowance ran out the compute suspended, refresh-token lookups failed, and the
+> connector could not re-authenticate. The finding itself was valid; the *timer-based*
+> remedy was not. Expired rows are now purged opportunistically on token issuance —
+> see `docs/plans/oauth-idle-compute-plan.md`.
+
 ---
 
 ## Recommendations
@@ -112,7 +120,14 @@ A crafted auth URL with a malicious `redirect_uri` sends the auth code to an att
   **Triggered by:** F4 — `/authorize` passes `redirect_uri` through without validation.
 
 - **Route:** `/backend-architect` → `.claude/commands/backend-architect.md`
-  **Draft principle:** *"When OAuth refresh tokens are stored in the DB, add a cleanup path for expired rows in the same `setInterval` that purges in-memory state. A token rotation scheme with no expiry cleanup will grow `oauth_tokens` without bound. Pattern: `prisma.oAuthToken.deleteMany({ where: { expiresAt: { lt: new Date() } } })` inside the existing cleanup interval, wrapped in `.catch(() => {})` so a DB hiccup doesn't kill the interval."*
+  **Draft principle:** ~~*"When OAuth refresh tokens are stored in the DB, add a cleanup path for expired rows in the same `setInterval` that purges in-memory state. A token rotation scheme with no expiry cleanup will grow `oauth_tokens` without bound. Pattern: `prisma.oAuthToken.deleteMany({ where: { expiresAt: { lt: new Date() } } })` inside the existing cleanup interval, wrapped in `.catch(() => {})` so a DB hiccup doesn't kill the interval."*~~
+  **⚠️ SUPERSEDED — do not apply.** This principle was never absorbed into
+  `.claude/commands/backend-architect.md`, but the code change it describes was made and
+  caused an outage (see the F6 note above). Replacement principle: *"Never put a recurring
+  database query on a timer when the database is serverless/scale-to-zero. A periodic query
+  resets the idle countdown, so the compute never suspends and burns its allowance while
+  doing nothing. Do the housekeeping opportunistically on an event that already touches the
+  DB — for `oauth_tokens`, on token issuance, which is the only event that adds rows."*
   **Triggered by:** F6 — `oauth_tokens` has no expiry cleanup.
 
 - **Route:** `/devops` → `~/.claude/commands/devops.md` (global, no project override)

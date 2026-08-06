@@ -30,7 +30,7 @@ Data          src/db/*           ← Prisma client; schema in prisma/schema.pris
 - **postings** — legs of an entry. `amount` is **signed integer minor units** (cents): debit positive, credit negative. Postings of an entry always sum to zero.
 - **rules** — auto-categorization: a case-insensitive description substring maps to an action — `categorize` (a target account, optionally a property) or `exclude` (skip the line on import). Priority-ordered.
 - **receipts** — structured receipt data linked to an entry. `fileKey` holds the Railway Bucket object key when the original file was uploaded; `mimeType` records its type. Signed download URLs (1-hour TTL) are generated on demand via `manage_receipts action='get_url'`.
-- **oauth_tokens** — hashed refresh tokens for the Claude.ai connector OAuth flow. `tokenHash` (SHA-256 hex), `clientId`, `expiresAt` (30-day TTL), `consumed` flag for rotation + replay detection. Expired rows are purged on a 60-second cleanup interval.
+- **oauth_tokens** — hashed refresh tokens for the Claude.ai connector OAuth flow. `tokenHash` (SHA-256 hex), `clientId`, `expiresAt` (30-day TTL), `consumed` flag for rotation + replay detection. Expired rows are purged opportunistically when a new refresh token is issued — deliberately not on a timer, since a periodic query prevents the serverless compute from ever scaling to zero (see `docs/plans/oauth-idle-compute-plan.md`).
 
 `add_transaction` is sugar over postings: "money flows FROM account A TO account B" creates a debit on B (+) and a credit on A (−).
 

@@ -77,7 +77,11 @@ export async function startHttp(): Promise<void> {
       response_types_supported: ["code"],
       grant_types_supported: ["authorization_code", "refresh_token"],
       code_challenge_methods_supported: ["S256"],
-      token_endpoint_auth_methods_supported: ["none"],
+      // /token requires client_secret in the request body (RFC 6749 §2.3.1), and
+      // /authorize refuses to run at all unless OAUTH_CLIENT_SECRET is set — so
+      // any deployment where OAuth works is one where the secret is mandatory.
+      // Advertising "none" told clients to omit it and would fail the exchange.
+      token_endpoint_auth_methods_supported: ["client_secret_post"],
     }),
   );
 

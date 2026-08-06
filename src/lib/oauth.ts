@@ -7,24 +7,18 @@ import { prisma } from "../db/client.js";
 type AuthCodeEntry = { clientId: string; codeChallenge: string; expiresAt: number };
 const authCodes = new Map<string, AuthCodeEntry>();
 
-let cleanupInFlight = false;
-setInterval(() => {
-  const now = Date.now();
-  for (const [code, entry] of authCodes) {
-    if (entry.expiresAt < now) authCodes.delete(code);
-  }
-  // Purge expired DB refresh tokens — skip if previous run is still in progress.
-  if (cleanupInFlight) return;
-  cleanupInFlight = true;
-  prisma.oAuthToken
-    .deleteMany({ where: { expiresAt: { lt: new Date() } } })
-    .catch((err) => console.error("oauth_tokens cleanup failed:", err))
-    .finally(() => { cleanupInFlight = false; });
-}, 60_000).unref();
-
 export function issueAuthCode(clientId: string, codeChallenge: string): string {
+  // Sweep expired entries here rather than on a timer. Codes are only ever added
+  // in this function, so sweeping at insert bounds the map just as well — and a
+  // periodic timer keeps the database compute from ever scaling to zero
+  // (see docs/plans/oauth-idle-compute-plan.md).
+  const now = Date.now();
+  for (const [existing, entry] of authCodes) {
+    if (entry.expiresAt < now) authCodes.delete(existing);
+  }
+
   const code = crypto.randomBytes(32).toString("hex");
-  authCodes.set(code, { clientId, codeChallenge, expiresAt: Date.now() + 5 * 60_000 });
+  authCodes.set(code, { clientId, codeChallenge, expiresAt: now + 5 * 60_000 });
   return code;
 }
 
@@ -76,11 +70,29 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+/**
+ * Drop refresh tokens that are already past their expiry.
+ *
+ * Runs on issuance instead of on a timer: issuance is the only event that adds
+ * rows, and a periodic query would keep the database compute permanently awake
+ * (see docs/plans/oauth-idle-compute-plan.md). Errors are swallowed — expired
+ * rows are already rejected by `rotateRefreshToken`, so failing to delete them
+ * is harmless, and housekeeping must never be able to fail an auth exchange.
+ */
+async function purgeExpiredTokens(): Promise<void> {
+  try {
+    await prisma.oAuthToken.deleteMany({ where: { expiresAt: { lt: new Date() } } });
+  } catch (err) {
+    console.error("oauth_tokens cleanup failed:", err);
+  }
+}
+
 export async function issueRefreshToken(clientId: string): Promise<string> {
   const token = crypto.randomBytes(32).toString("hex");
   await prisma.oAuthToken.create({
     data: { tokenHash: hashToken(token), clientId, expiresAt: new Date(Date.now() + REFRESH_TTL_MS) },
   });
+  await purgeExpiredTokens();
   return token;
 }
 
@@ -100,16 +112,9 @@ export async function rotateRefreshToken(
 
   await prisma.oAuthToken.update({ where: { tokenHash }, data: { consumed: true } });
 
-  const newToken = crypto.randomBytes(32).toString("hex");
-  await prisma.oAuthToken.create({
-    data: {
-      tokenHash: hashToken(newToken),
-      clientId: record.clientId,
-      expiresAt: new Date(Date.now() + REFRESH_TTL_MS),
-    },
-  });
+  const newRefreshToken = await issueRefreshToken(record.clientId);
 
-  return { clientId: record.clientId, newRefreshToken: newToken };
+  return { clientId: record.clientId, newRefreshToken };
 }
 
 // --- timing-safe string comparison -------------------------------------------
