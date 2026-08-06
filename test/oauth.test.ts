@@ -1,4 +1,5 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import { prisma } from "../src/db/client.js";
 import {
   issueAuthCode,
@@ -62,6 +63,26 @@ describe("auth codes", () => {
 
   it("returns null for an unknown code", () => {
     expect(consumeAuthCode("notacode")).toBeNull();
+  });
+
+  // The 5-minute TTL used to be swept by the same 60s timer that kept the
+  // database compute awake. Sweeping now happens on issue; expiry itself is
+  // still enforced by consumeAuthCode, which is what this guards.
+  it("rejects a code past its 5-minute TTL", () => {
+    vi.useFakeTimers();
+    try {
+      const challenge = crypto.randomBytes(32).toString("base64url");
+      const code = issueAuthCode(TEST_CLIENT, challenge);
+
+      vi.advanceTimersByTime(4 * 60_000);
+      expect(consumeAuthCode(code)).not.toBeNull(); // still inside the window
+
+      const later = issueAuthCode(TEST_CLIENT, challenge);
+      vi.advanceTimersByTime(6 * 60_000);
+      expect(consumeAuthCode(later)).toBeNull(); // past the TTL
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
@@ -149,5 +170,59 @@ describe("refresh tokens", () => {
 
   it("returns null for an unknown token", async () => {
     expect(await rotateRefreshToken("notarealtoken")).toBeNull();
+  });
+
+  // Regression guard: expired-token housekeeping used to run on a 60s timer,
+  // which kept the Neon compute from ever scaling to zero and eventually
+  // exhausted the monthly compute allowance. The purge now happens on issuance.
+  // See docs/plans/oauth-idle-compute-plan.md.
+  it("purges already-expired tokens when a new one is issued", async () => {
+    const expiredHash = sha256hex(`expired-${crypto.randomBytes(16).toString("hex")}`);
+    await prisma.oAuthToken.create({
+      data: {
+        tokenHash: expiredHash,
+        clientId: TEST_CLIENT,
+        expiresAt: new Date(Date.now() - 60_000), // already expired
+      },
+    });
+    createdTokenHashes.push(expiredHash); // belt-and-braces if the assertion fails
+
+    const fresh = await issueRefreshToken(TEST_CLIENT);
+    createdTokenHashes.push(sha256hex(fresh));
+
+    // the expired row is gone …
+    expect(await prisma.oAuthToken.findUnique({ where: { tokenHash: expiredHash } })).toBeNull();
+    // … and the freshly issued one survived the purge and still works
+    expect(await prisma.oAuthToken.findUnique({ where: { tokenHash: sha256hex(fresh) } })).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// OAuth discovery metadata — must match what /token actually enforces
+// ---------------------------------------------------------------------------
+
+// The advertised client-auth method and the /token enforcement are two halves of
+// one contract. They drifted once already: the metadata said "none" while /token
+// required a client_secret, which only stayed invisible because the deployment's
+// secret sat under an old variable name so the check never ran. A client that
+// trusted the metadata would have failed the exchange.
+
+describe("OAuth authorization-server metadata", () => {
+  const httpSrc = readFileSync(new URL("../src/transports/http.ts", import.meta.url), "utf8");
+
+  it("advertises client_secret_post, not none", () => {
+    const advertised = httpSrc.match(
+      /token_endpoint_auth_methods_supported:\s*\[([^\]]*)\]/,
+    )?.[1];
+
+    expect(advertised, "expected token_endpoint_auth_methods_supported in http.ts").toBeDefined();
+    expect(advertised).toContain("client_secret_post");
+    expect(advertised).not.toContain("none");
+  });
+
+  it("still enforces client_secret at /token", () => {
+    // If this enforcement is ever removed, the metadata above becomes a lie in
+    // the opposite direction — so the pair has to move together.
+    expect(httpSrc).toMatch(/body\.client_secret\s*!==\s*requiredSecret/);
   });
 });
