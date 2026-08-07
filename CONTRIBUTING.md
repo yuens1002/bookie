@@ -46,6 +46,8 @@ npm run test:watch # watch mode
 
 **Integration tests never use `BOOKIE_DB_URL`.** They read `BOOKIE_TEST_DB_URL` (a separate Neon branch), which `test/setup.ts` substitutes for `BOOKIE_DB_URL` before any test constructs a Prisma client. The suite refuses to start if `BOOKIE_TEST_DB_URL` is unset or resolves to the same database as `BOOKIE_DB_URL` — cleanup only runs in `afterAll`, so an interrupted run against a real ledger would leave rows behind. Refresh the test branch with `npx neonctl branches reset <branch> --parent`.
 
+**Test files run one at a time** (`fileParallelism: false` in `vitest.config.ts`), so the suite takes ~40s rather than ~10s. Every integration file writes to the same test database and only cleans up in `afterAll`; run in parallel, one file's teardown deletes rows out from under another file's in-flight query. Don't re-enable file parallelism without giving each file its own database.
+
 `npm run setup` provisions the ledger database but **not** a test branch, so create one before running the suite the first time:
 
 ```bash

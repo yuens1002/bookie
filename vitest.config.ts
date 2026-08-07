@@ -35,5 +35,22 @@ export default defineConfig({
     // isolation); vitest's defaults don't exclude .claude, so a stray one
     // silently double-runs the whole suite via its own copy of test/**.
     exclude: [...configDefaults.exclude, ".claude/**"],
+    // Every integration file writes to the one shared test database and only
+    // cleans up in `afterAll`. Run files one at a time so no file's teardown
+    // can delete rows out from under another file's query — `generate_report`
+    // reads every posting in a month and died on `Inconsistent query result:
+    // Field entry is required to return data, got null` when a parallel file's
+    // `afterAll` removed the parent entry mid-query (see v0.8.13).
+    //
+    // The alternative is a database per file, which is airtight but means
+    // provisioning and migrating N Neon branches per run. This costs ~30s of
+    // wall time on a suite one person runs by hand; that is the cheaper trade.
+    //
+    // Don't reach for `isolate: false` to win the time back — `vitest run
+    // --no-isolate` fails 17 of 18 files. Sharing one module registry means
+    // test/setup.ts's env mutation outlives the file that made it, so the next
+    // file's setup sees BOOKIE_DB_URL already holding the test URL and the
+    // same-database guard trips on its own substitution.
+    fileParallelism: false,
   },
 });
