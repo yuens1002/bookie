@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { parseToolResult as parse } from "./tool-result.js";
 import { buildServer } from "../src/server.js";
 import { prisma } from "../src/db/client.js";
 import { newId } from "../src/lib/id.js";
@@ -15,12 +16,6 @@ const bankId = newId("acc");
 const expenseId = newId("acc");
 const createdEntryIds: string[] = [];
 const createdReceiptIds: string[] = [];
-
-function parse(res: CallToolResult): any {
-  const block = res.content[0];
-  if (!block || block.type !== "text") throw new Error("expected text content");
-  return JSON.parse(block.text);
-}
 
 async function createEntry(date: string, description: string): Promise<string> {
   const entryId = newId("je");

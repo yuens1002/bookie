@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { parseToolResult as parse } from "./tool-result.js";
 import { buildServer } from "../src/server.js";
 import { prisma } from "../src/db/client.js";
 import { newId } from "../src/lib/id.js";
@@ -61,11 +62,6 @@ const bankId = newId("acc");
 const propertyId = newId("prop");
 const PFX = `RULETEST_${newId("p")}_`; // unique pattern prefix → isolates this file's rules
 
-function parse(res: CallToolResult): any {
-  const block = res.content[0];
-  if (!block || block.type !== "text") throw new Error("expected text content");
-  return JSON.parse(block.text);
-}
 function errText(res: CallToolResult): string {
   expect(res.isError).toBe(true);
   const block = res.content[0];
