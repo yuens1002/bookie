@@ -13,7 +13,8 @@ import {
 import crypto from "node:crypto";
 
 // Unit tests for OAuth crypto logic — no HTTP layer, no MCP server.
-// Runs against the Neon dev branch (refresh tokens go to the DB).
+// Runs against BOOKIE_TEST_DB_URL (refresh tokens go to the DB) — test/setup.ts
+// enforces that it is not the live ledger.
 
 const TEST_CLIENT = "test-client";
 

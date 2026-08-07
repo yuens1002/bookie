@@ -6,7 +6,8 @@ import { buildServer } from "../src/server.js";
 import { prisma } from "../src/db/client.js";
 import { newId } from "../src/lib/id.js";
 
-// Integration tests against the Neon dev branch. Each test creates its own
+// Integration tests against BOOKIE_TEST_DB_URL (never the live ledger —
+// test/setup.ts enforces it). Each test creates its own
 // data and cleans up; the seeded chart of accounts is never touched.
 
 let client: Client;
