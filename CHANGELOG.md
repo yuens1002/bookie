@@ -11,6 +11,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 ### Fixed
+
+## [0.8.13] — 2026-08-06
+
+### Added
+
+### Changed
+
+### Fixed
 - `test/tool-result.ts`: when a tool fails, the server returns its error as plain text, and the eight test files that each carried an identical `parse()` helper called `JSON.parse` on it directly — turning every server-side error into `SyntaxError: Unexpected token 'I'` and discarding the actual cause. An intermittent `report.test.ts` failure had survived several sessions for exactly this reason: three clean re-runs could not reproduce it and nothing was left to diagnose. The helper is now shared and includes the response text on a parse failure, which identified the cause on its first recurrence — `Inconsistent query result: Field entry is required to return data, got null` from `prisma.posting.findMany()` in `src/tools/reports.ts`, i.e. a posting whose parent entry was deleted mid-query by a different test file's `afterAll`. `generate_report` reads every posting in a month, so parallel test files sharing one database inevitably see each other's rows. The underlying concurrency issue is not fixed here; it is now diagnosable.
 - `scripts/verify-published-install.ts`: the post-publish smoke test failed on every release after `@modelcontextprotocol/inspector` crossed v1 → v2 (#56). The inspector does not give the server it spawns its own environment — the `-e` default is `{}` — so the published server started with no `BOOKIE_DB_URL` and died in `bootstrapLedger`. The DB and API-key variables are now passed explicitly via `-e`, single-quoted because Neon connection strings contain `?` and `&`. The inspector is pinned to 2.1.0: an unpinned `npx` silently upgraded across a major version between releases, and the failure surfaced as a misconfigured-environment error that looked nothing like dependency drift. `main()` now only runs when the script is invoked directly (the same guard `scripts/setup.ts` uses) so its helpers can be unit-tested without provisioning a real Neon project; `scripts/verify-published-install.test.ts` covers the flag building and shell escaping. The entry-point guard itself moved to a shared `isMainModule()` in `scripts/setup.ts` (both scripts had the same raw `process.argv[1] === fileURLToPath(...)` compare) and now resolves both sides, since `process.argv[1]` reflects how the script was invoked and need not be absolute — and a wrong answer there fails silently, exiting 0 with the smoke test never having run.
 
@@ -192,7 +200,8 @@ Minor bump, not patch — retroactively marking the npm/Railway/GHCR distributio
 - Auto-generated tool reference (`npm run docs:tools`).
 - Docs: README, Architecture, Roadmap, Changelog. Dockerfile + railway.json for deploy.
 
-[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.12...HEAD
+[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.13...HEAD
+[0.8.13]: https://github.com/yuens1002/bookie/compare/v0.8.12...v0.8.13
 [0.8.12]: https://github.com/yuens1002/bookie/compare/v0.8.5...v0.8.12
 [0.8.5]: https://github.com/yuens1002/bookie/compare/v0.8.2...v0.8.5
 [0.8.2]: https://github.com/yuens1002/bookie/compare/v0.8.0...v0.8.2
