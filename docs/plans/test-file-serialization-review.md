@@ -39,7 +39,7 @@ No `AC-TST-*` rows — this change alters how the existing suite is scheduled, n
 Two preconditions were checked, since `fileParallelism: false` only serializes *files*:
 
 - `grep -rn "\.concurrent\|sequence" test/ vitest.config.ts` → no matches. Nothing opts into intra-file concurrency, so file-level serialization is sufficient.
-- `isolate: false` was deliberately **not** added to claw back wall time. Every test file calls `prisma.$disconnect()` in its `afterAll`; sharing a module registry would let the first file to finish disconnect the client for every file after it.
+- `isolate: false` was deliberately **not** added to claw back wall time. The reason was initially assumed and then checked, and the assumption was wrong, so it is worth stating precisely. The expectation was that a shared module registry would let the first file's `prisma.$disconnect()` in `afterAll` kill the client for every file after it. `npx vitest run --no-isolate` actually fails earlier and for a different reason: 17 of 18 files die in setup with `BOOKIE_TEST_DB_URL addresses the same database as BOOKIE_DB_URL — refusing to run`. Sharing one module registry means `test/setup.ts`'s `process.env.BOOKIE_DB_URL = testUrl` outlives the file that made it, so the next file's setup sees the substitution already applied and the same-database guard trips on its own handiwork. The `$disconnect()` theory is untested — the setup failure is upstream of it, so that path never executes. The guard behaving this way is correct fail-closed behavior, not a bug; it simply isn't re-entrant, and nothing needs it to be.
 
 ## Docs drift
 
@@ -69,3 +69,7 @@ Two preconditions were checked, since `fileParallelism: false` only serializes *
 - **Route:** cross-cutting → `CLAUDE.md` process notes
   **Draft note:** *"Measure before and after when a change trades wall time for correctness; carry the real numbers into the CHANGELOG. The 10s → 45s figure quoted for this change from a prior session was a guess that happened to be close — 9.6s → 40.0s measured. Quoting a remembered number as if it were measured is the failure mode, independent of whether it turns out right."*
   **Triggered by:** the estimate predated any measurement of the serial run.
+
+- **Route:** `/engineering-base` → `~/.claude/commands/engineering-base.md`
+  **Draft principle:** *"A causal claim about why an alternative was rejected is an assertion, not a rationale, until it is run. Before writing 'X would break because Y' into a PR body, doc, or code comment, spend the command that checks it — the cost is usually one test run, and a wrong mechanism written down confidently is worse than no explanation, because it stops the next person from looking."*
+  **Triggered by:** `isolate: false` was rejected in the first draft of this report and the PR body on the stated grounds that `prisma.$disconnect()` would leak across files. `npx vitest run --no-isolate` took 10s and showed the real failure is `test/setup.ts`'s same-database guard tripping on its own env mutation — a different mechanism entirely, and the `$disconnect()` path never even executes. The claim had already been written into two artifacts before it was checked.

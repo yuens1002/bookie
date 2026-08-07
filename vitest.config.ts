@@ -45,6 +45,12 @@ export default defineConfig({
     // The alternative is a database per file, which is airtight but means
     // provisioning and migrating N Neon branches per run. This costs ~30s of
     // wall time on a suite one person runs by hand; that is the cheaper trade.
+    //
+    // Don't reach for `isolate: false` to win the time back — `vitest run
+    // --no-isolate` fails 17 of 18 files. Sharing one module registry means
+    // test/setup.ts's env mutation outlives the file that made it, so the next
+    // file's setup sees BOOKIE_DB_URL already holding the test URL and the
+    // same-database guard trips on its own substitution.
     fileParallelism: false,
   },
 });
