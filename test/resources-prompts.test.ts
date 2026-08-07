@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { parseToolResult as parseText } from "./tool-result.js";
 import { buildServer } from "../src/server.js";
 import { prisma } from "../src/db/client.js";
 import { newId } from "../src/lib/id.js";
@@ -25,12 +26,6 @@ const createdEntryIds: string[] = [];
 
 // Unique prefix for any rules we create so we can clean them up
 const PFX = `RESTEST_${newId("p")}_`;
-
-function parseText(res: CallToolResult): any {
-  const block = res.content[0];
-  if (!block || block.type !== "text") throw new Error("expected text content");
-  return JSON.parse(block.text);
-}
 
 function errText(res: CallToolResult): string {
   expect(res.isError).toBe(true);

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { parseToolResult as parse } from "./tool-result.js";
 import { buildServer } from "../src/server.js";
 import { prisma } from "../src/db/client.js";
 import { newId } from "../src/lib/id.js";
@@ -21,12 +22,6 @@ const bizExpenseId = newId("acc");
 const bizIncomeId = newId("acc");
 const equityId = newId("acc"); // for uncategorized entries (no income/expense leg)
 const createdEntryIds: string[] = [];
-
-function parse(res: CallToolResult): any {
-  const block = res.content[0];
-  if (!block || block.type !== "text") throw new Error("expected text content");
-  return JSON.parse(block.text);
-}
 
 beforeAll(async () => {
   // Segment
