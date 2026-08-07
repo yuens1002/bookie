@@ -11,6 +11,7 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 ### Fixed
+- `scripts/verify-published-install.ts`: the post-publish smoke test failed on every release after `@modelcontextprotocol/inspector` crossed v1 → v2 (#56). The inspector does not give the server it spawns its own environment — the `-e` default is `{}` — so the published server started with no `BOOKIE_DB_URL` and died in `bootstrapLedger`. The DB and API-key variables are now passed explicitly via `-e`, single-quoted because Neon connection strings contain `?` and `&`. The inspector is pinned to 2.1.0: an unpinned `npx` silently upgraded across a major version between releases, and the failure surfaced as a misconfigured-environment error that looked nothing like dependency drift. `main()` now only runs when the script is invoked directly (the same guard `scripts/setup.ts` uses) so its helpers can be unit-tested without provisioning a real Neon project; `scripts/verify-published-install.test.ts` covers the flag building and shell escaping.
 
 ## [0.8.12] — 2026-08-06
 
