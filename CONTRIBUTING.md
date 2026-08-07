@@ -42,7 +42,17 @@ npm run test:watch # watch mode
 ```
 
 - `src/lib/money.test.ts` — pure unit tests (no DB) for the integer-cent money helpers.
-- `test/ledger.test.ts` — integration tests that drive the MCP tools end-to-end and assert the double-entry invariant. **These need a database**: they read `BOOKIE_DB_URL` from `.env`, create throwaway accounts/entries, and clean up after themselves. Point it at a disposable branch — never production.
+- `test/ledger.test.ts` — integration tests that drive the MCP tools end-to-end and assert the double-entry invariant. **These need a database**: they create throwaway accounts/entries and clean up after themselves.
+
+**Integration tests never use `BOOKIE_DB_URL`.** They read `BOOKIE_TEST_DB_URL` (a separate Neon branch), which `test/setup.ts` substitutes for `BOOKIE_DB_URL` before any test constructs a Prisma client. The suite refuses to start if `BOOKIE_TEST_DB_URL` is unset or resolves to the same database as `BOOKIE_DB_URL` — cleanup only runs in `afterAll`, so an interrupted run against a real ledger would leave rows behind. Refresh the test branch with `npx neonctl branches reset <branch> --parent`.
+
+`npm run setup` provisions the ledger database but **not** a test branch, so create one before running the suite the first time:
+
+```bash
+npx neonctl branches create --name test --parent main --project-id <id>
+npx neonctl connection-string test --project-id <id> --pooled   # -> BOOKIE_TEST_DB_URL
+npx neonctl connection-string test --project-id <id>            # -> BOOKIE_TEST_DB_DIRECT_URL
+```
 
 ## Conventions (please follow)
 
