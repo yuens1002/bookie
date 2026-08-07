@@ -2,8 +2,7 @@ import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { parseConnectionUris, resolveOrgId, retry } from "./setup.js";
+import { isMainModule, parseConnectionUris, resolveOrgId, retry } from "./setup.js";
 
 // Smoke-tests the *published* npm package end-to-end: installs bookie-mcp
 // from the registry into a throwaway directory, pushes its bundled Prisma
@@ -118,7 +117,7 @@ async function main(): Promise<void> {
 // Only run when invoked directly — importing this module (the unit tests import
 // its pure helpers) must not kick off a real Neon project + npm install.
 // Same guard as scripts/setup.ts.
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   main().catch((err: unknown) => {
     console.error("Verify published install failed:", err instanceof Error ? err.message : String(err));
     process.exit(1);
