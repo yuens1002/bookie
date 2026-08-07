@@ -6,6 +6,23 @@ import { dirname, resolve } from "node:path";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
+/**
+ * Is this module the process entry point?
+ *
+ * `process.argv[1]` is not guaranteed to be absolute — it reflects how the script
+ * was invoked — and is `undefined` under `tsx -e`, so resolve both sides before
+ * comparing rather than matching the raw strings.
+ *
+ * Worth being careful about: a wrong answer here fails *silently*. The script
+ * exits 0 having done nothing, so a smoke test would report success without
+ * having run. Prefer that to be impossible rather than merely unlikely.
+ */
+export function isMainModule(importMetaUrl: string): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  return resolve(entry) === resolve(fileURLToPath(importMetaUrl));
+}
+
 // --- Types ------------------------------------------------------------------
 
 interface NeonConnectionParameters {
@@ -276,7 +293,7 @@ Next step: npm run build
 }
 
 // Only auto-run when executed directly (not when imported by tests)
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   main().catch((err: unknown) => {
     console.error("Setup failed:", err instanceof Error ? err.message : String(err));
     process.exit(1);

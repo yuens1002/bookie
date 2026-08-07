@@ -2,7 +2,7 @@ import { execSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseConnectionUris, resolveOrgId, retry } from "./setup.js";
+import { isMainModule, parseConnectionUris, resolveOrgId, retry } from "./setup.js";
 
 // Smoke-tests the *published* npm package end-to-end: installs bookie-mcp
 // from the registry into a throwaway directory, pushes its bundled Prisma
@@ -10,6 +10,36 @@ import { parseConnectionUris, resolveOrgId, retry } from "./setup.js";
 // over stdio — the exact "no clone" flow documented in README.md. Runs in
 // CI right after `npm publish`; the Neon project is always deleted after,
 // pass or fail.
+
+// Pinned deliberately. The inspector's CLI is the contract this smoke test depends
+// on, and an unpinned `npx` silently crossed v1 → v2 between releases: v2 no longer
+// gives the spawned server the parent environment, so the published server started
+// with no BOOKIE_DB_URL and every release after the bump would have failed (#56).
+const INSPECTOR_VERSION = "2.1.0";
+
+/**
+ * POSIX single-quote escaping. Connection strings contain `?` and `&`, and may
+ * contain `$` — all of which /bin/sh would interpret inside an unquoted or
+ * double-quoted argument.
+ */
+export function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * `-e KEY=VALUE` flags for the inspector CLI.
+ *
+ * The inspector does not pass its own environment to the server it spawns — its
+ * `-e` default is `{}`. This mirrors how MCP clients declare a server's `env`
+ * block explicitly rather than leaking the parent's environment into every
+ * third-party server. So exporting these vars for the inspector process is not
+ * enough; they have to be declared here to reach the server.
+ */
+export function buildInspectorEnvFlags(env: Record<string, string>): string {
+  return Object.entries(env)
+    .map(([key, value]) => `-e ${shellQuote(`${key}=${value}`)}`)
+    .join(" ");
+}
 
 function run(cmd: string, cwd: string, extraEnv: Record<string, string> = {}): string {
   return execSync(cmd, {
@@ -60,10 +90,13 @@ async function main(): Promise<void> {
     );
 
     console.log("Starting the published server over stdio and listing its tools...");
+    const serverEnv = { ...dbEnv, BOOKIE_API_KEY: "verify-smoke-test" };
     const toolsOutput = run(
-      "npx @modelcontextprotocol/inspector --cli node node_modules/bookie-mcp/dist/index.js --method tools/list",
+      `npx -y @modelcontextprotocol/inspector@${INSPECTOR_VERSION} --cli ` +
+        "node node_modules/bookie-mcp/dist/index.js --method tools/list " +
+        buildInspectorEnvFlags(serverEnv),
       workDir,
-      { ...dbEnv, BOOKIE_API_KEY: "verify-smoke-test" },
+      serverEnv,
     );
 
     if (!toolsOutput.includes("add_transaction")) {
@@ -81,7 +114,12 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err: unknown) => {
-  console.error("Verify published install failed:", err instanceof Error ? err.message : String(err));
-  process.exit(1);
-});
+// Only run when invoked directly — importing this module (the unit tests import
+// its pure helpers) must not kick off a real Neon project + npm install.
+// Same guard as scripts/setup.ts.
+if (isMainModule(import.meta.url)) {
+  main().catch((err: unknown) => {
+    console.error("Verify published install failed:", err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  });
+}

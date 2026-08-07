@@ -1,4 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { fileURLToPath } from "node:url";
+import { dirname, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import {
   checkNeonctl,
@@ -9,6 +11,7 @@ import {
   resolveOrgId,
   findExistingProject,
   retry,
+  isMainModule,
 } from "./setup.js";
 
 vi.mock("node:child_process", () => ({
@@ -262,5 +265,34 @@ describe("checkNeonctl", () => {
       stdout: Buffer.from(""),
     });
     expect(() => checkNeonctl()).toThrow(/neonctl/);
+  });
+});
+
+describe("isMainModule", () => {
+  const realArgv1 = process.argv[1];
+  const thisFile = fileURLToPath(import.meta.url);
+  afterEach(() => { process.argv[1] = realArgv1 as string; });
+
+  it("is true when argv[1] is the module's absolute path", () => {
+    process.argv[1] = thisFile;
+    expect(isMainModule(import.meta.url)).toBe(true);
+  });
+
+  // The case Copilot raised on PR #57: argv[1] reflects how the script was
+  // invoked and need not be absolute. A raw string compare would return false
+  // here — and the failure is silent, the script exits 0 having done nothing.
+  it("is true when argv[1] is a relative path to the same module", () => {
+    process.argv[1] = relative(process.cwd(), thisFile);
+    expect(isMainModule(import.meta.url)).toBe(true);
+  });
+
+  it("is false for a different module", () => {
+    process.argv[1] = resolve(dirname(thisFile), "some-other-script.ts");
+    expect(isMainModule(import.meta.url)).toBe(false);
+  });
+
+  it("is false when argv[1] is absent (e.g. `tsx -e`)", () => {
+    delete (process.argv as unknown as Array<string | undefined>)[1];
+    expect(isMainModule(import.meta.url)).toBe(false);
   });
 });
