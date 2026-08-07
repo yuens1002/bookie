@@ -6,12 +6,12 @@
     "url": "https://github.com/yuens1002/bookie",
     "source": "github"
   },
-  "version": "0.8.5",
+  "version": "0.8.12",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "bookie-mcp",
-      "version": "0.8.5",
+      "version": "0.8.12",
       "transport": {
         "type": "stdio"
       },
