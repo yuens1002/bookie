@@ -9,6 +9,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 ### Changed
+
+### Fixed
+
+## [0.8.12] — 2026-08-06
+
+### Added
+
+### Changed
 - `manage_receipts`: tool description now explicitly directs Claude.ai (mobile/web) clients to never pass `fileContent`, explains why no client-side upload workaround exists (raw file bytes are unreachable; a signed-URL upload path was tried and removed because Claude.ai's sandboxed runtime blocks outbound HTTP requests — see PR #28), and clarifies that `hasFile:false` from a structured-only attach is the correct, complete outcome, not a fallback. `docs/TOOLS.md` regenerated (also picked up pre-existing drift from PR #30's `add_transaction`/`import_transactions` describe clarifications, which had never been regenerated).
 
 ### Fixed
@@ -182,7 +190,8 @@ Minor bump, not patch — retroactively marking the npm/Railway/GHCR distributio
 - Auto-generated tool reference (`npm run docs:tools`).
 - Docs: README, Architecture, Roadmap, Changelog. Dockerfile + railway.json for deploy.
 
-[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.5...HEAD
+[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.12...HEAD
+[0.8.12]: https://github.com/yuens1002/bookie/compare/v0.8.5...v0.8.12
 [0.8.5]: https://github.com/yuens1002/bookie/compare/v0.8.2...v0.8.5
 [0.8.2]: https://github.com/yuens1002/bookie/compare/v0.8.0...v0.8.2
 [0.8.0]: https://github.com/yuens1002/bookie/compare/v0.7.11...v0.8.0
