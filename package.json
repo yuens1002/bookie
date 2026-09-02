@@ -6,6 +6,11 @@
   "description": "MCP server that keeps the books for your personal and business finances using double-entry accounting — import bank CSVs, categorize spending, reconcile, and generate US Schedule C tax reports, all driven from your LLM.",
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuens1002/bookie.git"
+  },
+  "homepage": "https://github.com/yuens1002/bookie#readme",
   "engines": {
     "node": ">=24"
   },

@@ -11,6 +11,12 @@ Ask your LLM to import a bank statement, categorize spending, reconcile a month,
 
 **Not for you if:** you want a dashboard UI, you need multi-user access, or you're satisfied with QuickBooks / a spreadsheet.
 
+<p align="center">
+  <img src="docs/images/receipt-to-ledger-mobile.png" alt="Claude on a phone: a photo of an Aldi receipt is captioned &quot;bookie it please, this was on the Visa&quot;; Claude resolves the card and category, calls add_transaction, and replies &quot;Logged: $9.48 Aldi → Groceries&quot;." width="320">
+</p>
+
+<p align="center"><em>Snap a receipt, say which card. Claude picks the accounts; bookie writes the balanced entry.</em></p>
+
 ## What you need before starting
 
 - **Node ≥ 24**
