@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { readFileSync } from "node:fs";
 import { prisma } from "../src/db/client.js";
 import {
   issueAuthCode,
@@ -10,6 +9,8 @@ import {
   issueRefreshToken,
   rotateRefreshToken,
 } from "../src/lib/oauth.js";
+import { requireAuth } from "../src/lib/auth.js";
+import { buildHttpApp } from "../src/transports/http.js";
 import crypto from "node:crypto";
 
 // Unit tests for OAuth crypto logic — no HTTP layer, no MCP server.
@@ -207,23 +208,155 @@ describe("refresh tokens", () => {
 // required a client_secret, which only stayed invisible because the deployment's
 // secret sat under an old variable name so the check never ran. A client that
 // trusted the metadata would have failed the exchange.
+//
+// Asserted behaviorally against a real app.request() call, not by grepping source
+// text for an implementation detail — a prior version of this test matched the
+// literal `body.client_secret !== requiredSecret` comparison, which broke for the
+// right reasons (a timing-safe rewrite) the moment that literal text changed. The
+// contract this test actually cares about is the observable behavior at /token,
+// which a source-text match can't distinguish from an unrelated refactor.
+
+type TokenResponseBody = { access_token?: string; refresh_token?: string; error?: string };
 
 describe("OAuth authorization-server metadata", () => {
-  const httpSrc = readFileSync(new URL("../src/transports/http.ts", import.meta.url), "utf8");
+  let app: ReturnType<typeof buildHttpApp>;
+  let savedClientSecret: string | undefined;
+  let savedClientId: string | undefined;
 
-  it("advertises client_secret_post, not none", () => {
-    const advertised = httpSrc.match(
-      /token_endpoint_auth_methods_supported:\s*\[([^\]]*)\]/,
-    )?.[1];
-
-    expect(advertised, "expected token_endpoint_auth_methods_supported in http.ts").toBeDefined();
-    expect(advertised).toContain("client_secret_post");
-    expect(advertised).not.toContain("none");
+  beforeAll(() => {
+    savedClientSecret = process.env.OAUTH_CLIENT_SECRET;
+    savedClientId = process.env.OAUTH_CLIENT_ID;
+    process.env.OAUTH_CLIENT_SECRET = "test-client-secret";
+    process.env.OAUTH_CLIENT_ID = TEST_CLIENT;
+    app = buildHttpApp();
   });
 
-  it("still enforces client_secret at /token", () => {
-    // If this enforcement is ever removed, the metadata above becomes a lie in
-    // the opposite direction — so the pair has to move together.
-    expect(httpSrc).toMatch(/body\.client_secret\s*!==\s*requiredSecret/);
+  afterAll(() => {
+    if (savedClientSecret !== undefined) process.env.OAUTH_CLIENT_SECRET = savedClientSecret;
+    else delete process.env.OAUTH_CLIENT_SECRET;
+    if (savedClientId !== undefined) process.env.OAUTH_CLIENT_ID = savedClientId;
+    else delete process.env.OAUTH_CLIENT_ID;
+  });
+
+  it("advertises client_secret_post, not none", async () => {
+    const res = await app.request("/.well-known/oauth-authorization-server");
+    const body = (await res.json()) as { token_endpoint_auth_methods_supported: string[] };
+    expect(body.token_endpoint_auth_methods_supported).toEqual(["client_secret_post"]);
+  });
+
+  async function postToken(params: Record<string, string>) {
+    return app.request("/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(params).toString(),
+    });
+  }
+
+  async function readJson(res: Response): Promise<TokenResponseBody> {
+    return (await res.json()) as TokenResponseBody;
+  }
+
+  it("rejects refresh_token grant with no client_secret, then accepts the same token with the correct one", async () => {
+    const token = await issueRefreshToken(TEST_CLIENT);
+    createdTokenHashes.push(sha256hex(token));
+
+    const rejected = await postToken({ grant_type: "refresh_token", refresh_token: token });
+    expect(rejected.status).toBe(401);
+    expect((await readJson(rejected)).error).toBe("invalid_client");
+
+    // Differential pair: same token, only the secret changes — proves the 401
+    // above was caused solely by the missing secret, and that a rejected
+    // attempt doesn't consume the token.
+    const accepted = await postToken({
+      grant_type: "refresh_token",
+      refresh_token: token,
+      client_secret: "test-client-secret",
+    });
+    expect(accepted.status).toBe(200);
+    const body = await readJson(accepted);
+    createdTokenHashes.push(sha256hex(body.refresh_token!));
+  });
+
+  it("rejects refresh_token grant with the wrong client_secret", async () => {
+    const token = await issueRefreshToken(TEST_CLIENT);
+    createdTokenHashes.push(sha256hex(token));
+
+    const res = await postToken({
+      grant_type: "refresh_token",
+      refresh_token: token,
+      client_secret: "definitely-not-the-secret",
+    });
+    expect(res.status).toBe(401);
+    expect((await readJson(res)).error).toBe("invalid_client");
+
+    const retry = await postToken({
+      grant_type: "refresh_token",
+      refresh_token: token,
+      client_secret: "test-client-secret",
+    });
+    expect(retry.status).toBe(200);
+    const body = await readJson(retry);
+    createdTokenHashes.push(sha256hex(body.refresh_token!));
+  });
+
+  it("rejects a non-string client_secret with 401, not 500", async () => {
+    // The form-urlencoded path can't send a non-string value — only a JSON body can.
+    const res = await app.request("/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ grant_type: "refresh_token", refresh_token: "whatever", client_secret: 12345 }),
+    });
+    expect(res.status).toBe(401);
+    expect((await readJson(res)).error).toBe("invalid_client");
+  });
+
+  it("refuses /token entirely when OAUTH_CLIENT_SECRET is unset, matching /authorize", async () => {
+    delete process.env.OAUTH_CLIENT_SECRET;
+    try {
+      const res = await postToken({ grant_type: "refresh_token", refresh_token: "whatever" });
+      expect(res.status).toBe(500);
+      expect((await readJson(res)).error).toBe("server_error");
+    } finally {
+      process.env.OAUTH_CLIENT_SECRET = "test-client-secret";
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// requireAuth — static BOOKIE_API_KEY comparison
+// ---------------------------------------------------------------------------
+
+describe("requireAuth", () => {
+  let savedApiKey: string | undefined;
+
+  beforeAll(() => {
+    savedApiKey = process.env.BOOKIE_API_KEY;
+    process.env.BOOKIE_API_KEY = "test-static-key";
+  });
+
+  afterAll(() => {
+    if (savedApiKey !== undefined) process.env.BOOKIE_API_KEY = savedApiKey;
+    else delete process.env.BOOKIE_API_KEY;
+  });
+
+  it("accepts the correct key", () => {
+    expect(requireAuth("Bearer test-static-key")).toEqual({ ok: true });
+  });
+
+  it("rejects the wrong key", () => {
+    expect(requireAuth("Bearer wrong-key").ok).toBe(false);
+  });
+
+  it("rejects a missing Authorization header", () => {
+    expect(requireAuth(undefined).ok).toBe(false);
+  });
+
+  it("returns no_static_key when BOOKIE_API_KEY is unset", () => {
+    delete process.env.BOOKIE_API_KEY;
+    try {
+      expect(requireAuth("Bearer anything")).toEqual({ ok: false, error: "no_static_key" });
+    } finally {
+      process.env.BOOKIE_API_KEY = "test-static-key";
+    }
   });
 });

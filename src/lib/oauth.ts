@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { prisma } from "../db/client.js";
+import { timingSafeEqual } from "./crypto.js";
 
 // --- in-memory auth code store (5-min TTL) -----------------------------------
 
@@ -115,12 +116,4 @@ export async function rotateRefreshToken(
   const newRefreshToken = await issueRefreshToken(record.clientId);
 
   return { clientId: record.clientId, newRefreshToken };
-}
-
-// --- timing-safe string comparison -------------------------------------------
-
-export function timingSafeEqual(a: string, b: string): boolean {
-  const aDigest = crypto.createHash("sha256").update(a).digest();
-  const bDigest = crypto.createHash("sha256").update(b).digest();
-  return crypto.timingSafeEqual(aDigest, bDigest);
 }
