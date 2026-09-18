@@ -6,6 +6,7 @@ import { Hono, type Context } from "hono";
 import { buildServer } from "../server.js";
 import { bootstrapLedger } from "./bootstrap.js";
 import { requireAuth } from "../lib/auth.js";
+import { timingSafeEqual } from "../lib/crypto.js";
 import {
   issueAuthCode,
   consumeAuthCode,
@@ -41,21 +42,15 @@ function checkRateLimit(ip: string): boolean {
 
 // --- HTTP transport ----------------------------------------------------------
 
-export async function startHttp(): Promise<void> {
-  // Require at least one auth mechanism before accepting any connections.
-  // An unauthenticated HTTP endpoint on a financial server is a data-exposure
-  // risk — refuse to start rather than silently run open.
-  const hasStaticKey = !!process.env.BOOKIE_API_KEY;
-  const hasJwtSecret = !!process.env.JWT_SECRET;
-  if (!hasStaticKey && !hasJwtSecret) {
-    throw new Error(
-      "HTTP transport requires auth: set BOOKIE_API_KEY (static bearer, for Claude Desktop) " +
-      "and/or JWT_SECRET (OAuth, for Claude.ai) in your environment variables.",
-    );
-  }
-
-  const seeded = await bootstrapLedger();
-
+/**
+ * Builds the Hono app and registers every route, with no side effects beyond
+ * that (no DB seeding, no listening socket) — split out of startHttp() so
+ * tests can exercise real routes via app.request() without a live server.
+ * Reads process.env fresh on every call rather than caching module-scope
+ * constants, so a test can vary OAUTH_CLIENT_SECRET / BOOKIE_API_KEY /
+ * PUBLIC_URL per case.
+ */
+export function buildHttpApp(): Hono<NodeBindings> {
   const app = new Hono<NodeBindings>();
 
   app.get("/health", (c) => c.json({ ok: true, service: "bookie", transport: "http" }));
@@ -128,10 +123,24 @@ export async function startHttp(): Promise<void> {
       : await c.req.json().catch(() => ({})) as Record<string, string>;
     const grantType = body.grant_type;
 
-    // Single-owner gate: if OAUTH_CLIENT_SECRET is set, validate the client_secret Claude.ai
-    // sends here (from the "OAuth Client Secret" field in the connector settings).
+    // Single-owner gate, matching /authorize's own: OAUTH_CLIENT_SECRET must be
+    // configured for either grant to proceed, not merely checked when it happens
+    // to be set. A conditional check here would silently open every grant
+    // (including refresh_token, redeemable with a token issued while the secret
+    // WAS set) the moment the secret is ever removed from the environment.
     const requiredSecret = process.env.OAUTH_CLIENT_SECRET;
-    if (requiredSecret && body.client_secret !== requiredSecret)
+    if (!requiredSecret) {
+      return c.json(
+        { error: "server_error", error_description: "OAUTH_CLIENT_SECRET is not configured — set it in your environment variables to enable OAuth." },
+        500,
+      );
+    }
+    // body is cast to Record<string, string> above, but that's a compile-time
+    // assertion, not a runtime guarantee — a JSON body's fields are unvalidated
+    // `any`, so client_secret could be a number/object/array in practice.
+    // timingSafeEqual hashes both arguments via crypto.createHash, which throws
+    // on a non-string, so this must be checked before comparing.
+    if (typeof body.client_secret !== "string" || !timingSafeEqual(body.client_secret, requiredSecret))
       return c.json({ error: "invalid_client" }, 401);
 
     if (grantType === "authorization_code") {
@@ -233,6 +242,25 @@ export async function startHttp(): Promise<void> {
 
   app.post("/mcp", mcpHandler);
   app.post("/", mcpHandler);
+
+  return app;
+}
+
+export async function startHttp(): Promise<void> {
+  // Require at least one auth mechanism before accepting any connections.
+  // An unauthenticated HTTP endpoint on a financial server is a data-exposure
+  // risk — refuse to start rather than silently run open.
+  const hasStaticKey = !!process.env.BOOKIE_API_KEY;
+  const hasJwtSecret = !!process.env.JWT_SECRET;
+  if (!hasStaticKey && !hasJwtSecret) {
+    throw new Error(
+      "HTTP transport requires auth: set BOOKIE_API_KEY (static bearer, for Claude Desktop) " +
+      "and/or JWT_SECRET (OAuth, for Claude.ai) in your environment variables.",
+    );
+  }
+
+  const seeded = await bootstrapLedger();
+  const app = buildHttpApp();
 
   const port = Number(process.env.PORT ?? 3000);
   serve({ fetch: app.fetch, port });

@@ -7,6 +7,8 @@
  * connections, so callers with a valid OAuth JWT still pass via the JWT check
  * in the MCP handler.
  */
+import { timingSafeEqual } from "./crypto.js";
+
 export type AuthResult = { ok: true } | { ok: false; error: string };
 
 export function requireAuth(authorizationHeader?: string): AuthResult {
@@ -14,6 +16,6 @@ export function requireAuth(authorizationHeader?: string): AuthResult {
   if (!expected) return { ok: false, error: "no_static_key" };
 
   const provided = authorizationHeader?.replace(/^Bearer\s+/i, "").trim();
-  if (provided && provided === expected) return { ok: true };
+  if (provided && timingSafeEqual(provided, expected)) return { ok: true };
   return { ok: false, error: "unauthorized" };
 }
