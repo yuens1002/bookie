@@ -11,6 +11,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 ### Fixed
+
+## [0.8.16] — 2026-09-18
+
+### Added
+
+### Changed
+
+### Fixed
 - `src/transports/http.ts`, `src/lib/auth.ts`: two secret comparisons — the `/token` handler's `client_secret` check and `requireAuth`'s `BOOKIE_API_KEY` check — used plain `!==`/`===` instead of the repo's own constant-time `timingSafeEqual` (already defined in `src/lib/oauth.ts` and correctly used for PKCE verification), leaking comparison time proportional to a matching prefix. `timingSafeEqual` moved to a new `src/lib/crypto.ts` (a generic utility, not OAuth-specific) and both checks now use it. Separately, `/token`'s `client_secret` enforcement was conditional on `OAUTH_CLIENT_SECRET` currently being set (`if (requiredSecret && ...)`) rather than required the way `/authorize` already requires it — if the secret were ever unset after being set (env var removed, redeploy without it), every grant, including `refresh_token`, would silently accept requests with no client authentication at all; a refresh token issued while the secret *was* set could then be rotated indefinitely. `/token` now refuses outright (`500`, matching `/authorize`'s existing error shape) when `OAUTH_CLIENT_SECRET` isn't configured, and the comparison is mandatory and timing-safe otherwise. `test/oauth.test.ts`'s only prior coverage of this enforcement was a source-text regex match against the literal `!==` comparison, which would have broken for the wrong reason (a refactor, not a regression) the moment this fix landed — replaced with real behavioral coverage against `/token` via a new `buildHttpApp()` export (split out of `startHttp()` so tests can exercise real routes with `app.request()`, no live server needed): missing/wrong/non-string `client_secret` rejected, correct secret accepted (differential-pair retries proving each rejection didn't consume the token), and the unset-secret case. New `requireAuth` coverage (previously untested) for the same reason. Confirmed non-vacuous for every new assertion by reverting the corresponding fix and observing the matching test fail. See `docs/plans/oauth-timing-safe-comparison-plan.md` for the full threat model.
 - `vitest.config.ts`: test files now run one at a time (`fileParallelism: false`). Every integration file writes to the one shared test database and only cleans up in `afterAll`, so with files running in parallel one file's teardown could delete rows out from under another file's in-flight query. That is the concurrency issue v0.8.13 made diagnosable but did not fix: `generate_report` reads every posting in a month, and `prisma.posting.findMany()` in `src/tools/reports.ts` failed with `Inconsistent query result: Field entry is required to return data, got null` when a parallel file's `afterAll` removed a posting's parent entry between Prisma's two queries. Serializing files closes the window structurally — no other file's `afterAll` can run while `report.test.ts` is calling a tool — rather than making the failure rarer. Note this is not a repro-and-confirm fix: the race surfaced roughly once in many runs and three clean re-runs could not reproduce it, so a green suite is not evidence either way; the argument is that the interleaving is no longer possible. Wall time goes from 9.6s to 40.0s (267 tests, 18 files) — the suite was always ~41s of work, previously overlapped across workers. The airtight alternative, a database per test file, would mean provisioning and migrating N Neon branches per run; that is not worth it for a suite one person runs by hand. The same interleaving is reachable in production — a `delete_transaction` concurrent with a `generate_report` would hit the identical Prisma error — but this change does not address that, and single-user LLM-driven usage makes it unlikely enough to leave alone. `CONTRIBUTING.md` documents the slower runtime and why file parallelism must not be re-enabled without per-file databases.
 
@@ -202,7 +210,8 @@ Minor bump, not patch — retroactively marking the npm/Railway/GHCR distributio
 - Auto-generated tool reference (`npm run docs:tools`).
 - Docs: README, Architecture, Roadmap, Changelog. Dockerfile + railway.json for deploy.
 
-[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.13...HEAD
+[Unreleased]: https://github.com/yuens1002/bookie/compare/v0.8.16...HEAD
+[0.8.16]: https://github.com/yuens1002/bookie/compare/v0.8.13...v0.8.16
 [0.8.13]: https://github.com/yuens1002/bookie/compare/v0.8.12...v0.8.13
 [0.8.12]: https://github.com/yuens1002/bookie/compare/v0.8.5...v0.8.12
 [0.8.5]: https://github.com/yuens1002/bookie/compare/v0.8.2...v0.8.5
